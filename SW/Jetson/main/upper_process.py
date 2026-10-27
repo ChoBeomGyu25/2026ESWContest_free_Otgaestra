@@ -16145,6 +16145,11 @@ def _patch_d50_source(text: str) -> str:
                             and _fix136_report.get(\"fix136_auto_recovery_complete\", False)
                         )
                         if _fix136_recovered:
+                            _fix136_attempts = int(globals().get("_FIX136_PHYSICAL_RETRY_COUNT", 0)) + 1
+                            globals()["_FIX136_PHYSICAL_RETRY_COUNT"] = _fix136_attempts
+                            if _fix136_attempts > 1:
+                                print("[FIX136-RETRY-LIMIT] second stage failed twice; safe recovery completed; STOP")
+                                return 2
                             globals()[\"_FIX103_SECOND_STAGE_PERCEPTION_RETRY\"] = 0
                             globals()[\"_FIX103_SECOND_STAGE_REINFER_PENDING\"] = True
                             print(
