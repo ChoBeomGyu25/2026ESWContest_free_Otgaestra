@@ -2,7 +2,7 @@
 
 **옷개스트라 · 접신 | NVIDIA Jetson Orin Nano Super**
 
-이 문서는 `SW/Jetson/`의 **유일한 README**입니다. 최종 통합 진입점인 `main/main.py`를 기준으로 의류 투입, 상·하의 분류, 전처리, 학습 기반 후처리(VLA), 접이판 동작까지 설명합니다. 기존 `preprocessing/`은 개발·제출 당시의 독립 실행 코드 보관 영역이며, 현재 통합 실행 진입점이 아닙니다.
+이 문서는 `SW/Jetson/`의 **유일한 README**입니다. 최종 통합 진입점인 `main/main.py`를 기준으로 의류 투입, 상·하의 분류, 전처리, 학습 기반 후처리(VLA), 접이판 동작까지 설명합니다. 기존 독립 실행용 `preprocessing/`은 통합 실행 경로에 포함되지 않아 최종 제출본에서 제거했습니다.
 
 > **검증 범위:** 팀의 Jetson/Docker 및 실제 하드웨어 구성에서 상의 1사이클과 하의 1사이클의 물리 실행을 각각 완료했습니다. 독립 Docker와 Fresh Clone 기준 통합 Self-test도 확인했습니다. 다른 Jetson 보드 또는 Docker 이미지에서 모든 TensorRT 엔진이 호환된다고 보장하지는 않습니다.
 
@@ -60,7 +60,6 @@ SW/Jetson/
 ├── common/
 │   ├── camera/                       # ELP 카메라 보정
 │   └── calibration/                  # 보드·바구니 좌표계 및 Homography
-└── preprocessing/                    # 기존 독립 실행/제출 코드 (통합 메인과 구분)
 ```
 
 `main.py`와 하위 모듈은 서로 의존하므로 특정 파일만 별도로 복사해 실행하는 방식은 권장하지 않습니다. 저장소의 `SW/Jetson/main`, `models`, `common` 전체를 함께 유지하세요.
@@ -145,4 +144,4 @@ git clone --branch final-jetson-integration --single-branch \
 - **제출 브랜치:** `final-jetson-integration`.
 - **작업 원칙:** 물리 검증한 로봇 동작 알고리즘은 임의 변경하지 않고, 제출 자료와 의존성의 일관성을 우선합니다.
 
-`preprocessing/`의 과거 독립 실행 스크립트는 보존하되, **통합 운용의 공식 진입점은 `SW/Jetson/main/main.py` 하나**입니다.
+최종 제출본에서는 과거 독립 실행 스크립트를 제거했으며, **통합 운용의 공식 진입점은 `SW/Jetson/main/main.py` 하나**입니다.
