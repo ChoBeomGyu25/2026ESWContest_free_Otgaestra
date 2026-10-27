@@ -1,0 +1,914 @@
+/* 7-inch 1280x800 touch UI - Qt Widgets QSS */
+/* Korean/Unicode font fallback for Jetson Ubuntu + Docker */
+* {
+    font-family: "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", "DejaVu Sans";
+    color: #EAF0F7;
+}
+
+/* Symbol-only control: use a font that contains the gear glyph */
+QPushButton#settingsButton {
+    font-family: "Noto Sans Symbols 2", "DejaVu Sans", "Noto Sans CJK KR";
+}
+
+/* Controls containing both Korean and symbols */
+QPushButton#modeToggleButton,
+QPushButton#startButton,
+QPushButton#pauseButton,
+QPushButton#resetButton,
+QLabel#connectionDot,
+QLabel#cameraLiveBadge {
+    font-family: "Noto Sans CJK KR", "Noto Sans Symbols 2", "DejaVu Sans", "NanumGothic";
+}
+QMainWindow, QWidget#centralwidget {
+    background-color: #0B1220;
+}
+QFrame#headerFrame, QFrame#cameraCard, QFrame#statusCard, QFrame#controlCard {
+    background-color: #111C2E;
+    border: 1px solid #22314A;
+    border-radius: 20px;
+}
+QLabel#titleLabel {
+    font-size: 26px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+QLabel#subtitleLabel {
+    font-size: 14px;
+    color: #8FA2BC;
+}
+QLabel#connectionDot {
+    color: #35D07F;
+    font-size: 16px;
+}
+QLabel#connectionLabel {
+    color: #B7C5D8;
+    font-size: 16px;
+    font-weight: 700;
+    margin-right: 12px;
+}
+QPushButton#settingsButton {
+    background-color: #19263A;
+    border: 1px solid #2A3B56;
+    border-radius: 14px;
+    font-size: 25px;
+}
+QPushButton#settingsButton:pressed { background-color: #253650; }
+QLabel#cameraTitle, QLabel#statusTitle {
+    font-size: 20px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+QLabel#cameraLiveBadge {
+    background-color: #39202A;
+    color: #FF6B7B;
+    border: 1px solid #63303B;
+    border-radius: 10px;
+    padding: 6px 11px;
+    font-size: 13px;
+    font-weight: 800;
+}
+QWidget#cameraLabel {
+    background-color: #07101C;
+    border: 2px solid #273956;
+    border-radius: 16px;
+    color: #60738E;
+    font-size: 22px;
+    font-weight: 700;
+}
+QLabel#stateBadge {
+    background-color: #163A31;
+    color: #55E0A0;
+    border: 1px solid #22624E;
+    border-radius: 14px;
+    font-size: 21px;
+    font-weight: 800;
+}
+QLabel#stepCaption, QLabel#detectedCaption, QLabel#currentActionCaption, QLabel#timeCaption {
+    color: #8093AE;
+    font-size: 14px;
+    font-weight: 700;
+}
+QLabel#stepLabel {
+    color: #FFFFFF;
+    font-size: 19px;
+    font-weight: 800;
+}
+QLabel#detectedValue, QLabel#currentActionValue, QLabel#timeValue {
+    color: #DDE8F6;
+    font-size: 17px;
+    font-weight: 700;
+}
+QProgressBar {
+    background-color: #25344C;
+    border: none;
+    border-radius: 10px;
+}
+QProgressBar::chunk {
+    background-color: #4D8DFF;
+    border-radius: 10px;
+}
+QLabel#progressText {
+    color: #79A8FF;
+    font-size: 14px;
+    font-weight: 800;
+}
+QFrame#infoSeparator { color: #27364D; }
+QLabel#vlaTimeoutPromptLabel {
+    background-color: #332A1E;
+    color: #FFD68A;
+    border: 1px solid #6B542A;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 8px 10px;
+}
+QPushButton#vlaTimeoutFoldButton {
+    background-color: #8A4A22;
+    color: #FFFFFF;
+    border: 1px solid #B76A32;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 8px 12px;
+}
+QPushButton#vlaTimeoutFoldButton:pressed { background-color: #6F391A; }
+QPushButton#vlaTimeoutFoldButton:disabled {
+    background-color: #3A3029;
+    color: #8F8174;
+    border-color: #4D4036;
+}
+QLabel#noticeLabel {
+    background-color: #302919;
+    color: #FFD47A;
+    border: 1px solid #5A4721;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px;
+}
+QPushButton#modeToggleButton, QPushButton#startButton, QPushButton#pauseButton, QPushButton#emptyBoardRefreshButton, QPushButton#resetButton {
+    border: none;
+    border-radius: 16px;
+    font-size: 21px;
+    font-weight: 800;
+    padding: 12px 18px;
+}
+QPushButton#modeToggleButton {
+    background-color: #1F3A2F;
+    color: #A9F0C9;
+    border: 1px solid #37664F;
+    font-size: 18px;
+}
+QPushButton#modeToggleButton:checked {
+    background-color: #4A3520;
+    color: #FFD99A;
+    border: 1px solid #775A31;
+}
+QPushButton#modeToggleButton:pressed { background-color: #2B493B; }
+QPushButton#startButton {
+    background-color: #397BFF;
+    color: #FFFFFF;
+}
+QPushButton#startButton:hover { background-color: #4B88FF; }
+QPushButton#startButton:pressed { background-color: #2C64D4; }
+QPushButton#pauseButton {
+    background-color: #26354D;
+    color: #F3F7FC;
+    border: 1px solid #3A4D69;
+}
+QPushButton#pauseButton:pressed { background-color: #334660; }
+QPushButton#emptyBoardRefreshButton {
+    background-color: #243A58;
+    color: #DDEBFF;
+    border: 1px solid #3C5B82;
+}
+QPushButton#emptyBoardRefreshButton:hover { background-color: #2D4A70; }
+QPushButton#emptyBoardRefreshButton:pressed { background-color: #1D3049; }
+QPushButton#resetButton {
+    background-color: #332A34;
+    color: #FFB6BE;
+    border: 1px solid #5A3940;
+}
+QPushButton#resetButton:pressed { background-color: #49323A; }
+QPushButton:disabled {
+    background-color: #202A39;
+    color: #617086;
+    border-color: #2B3749;
+}
+
+/* -------------------------------------------------------------------------
+   Settings / operation-check / folding-board test pages
+   ------------------------------------------------------------------------- */
+QStackedWidget#pageStack,
+QWidget#mainPage,
+QWidget#settingsPage,
+QWidget#plateTestPage {
+    background-color: #0B1220;
+}
+
+QFrame#settingsHeader,
+QFrame#settingsCard,
+QFrame#plateBoardCard,
+QFrame#plateControlCard {
+    background-color: #111C2E;
+    border: 1px solid #22314A;
+    border-radius: 20px;
+}
+
+QLabel#pageTitle {
+    color: #FFFFFF;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+QLabel#pageSubtitle,
+QLabel#sectionNote {
+    color: #8FA2BC;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#sectionTitle,
+QLabel#cardTitle {
+    color: #FFFFFF;
+    font-size: 21px;
+    font-weight: 800;
+}
+
+QPushButton#settingsBackButton,
+QPushButton#plateBackButton,
+QPushButton#reconnectButton,
+QPushButton#rearmButton {
+    background-color: #19263A;
+    color: #EAF0F7;
+    border: 1px solid #2A3B56;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 10px 14px;
+}
+
+QPushButton#settingsBackButton:pressed,
+QPushButton#plateBackButton:pressed,
+QPushButton#reconnectButton:pressed,
+QPushButton#rearmButton:pressed {
+    background-color: #253650;
+}
+
+QPushButton#plateTestEntryButton {
+    background-color: #16365E;
+    color: #FFFFFF;
+    border: 2px solid #397BFF;
+    border-radius: 18px;
+    font-size: 21px;
+    font-weight: 800;
+    text-align: left;
+    padding: 22px 24px;
+}
+
+QPushButton#plateTestEntryButton:hover {
+    background-color: #1C457A;
+}
+
+QPushButton#plateTestEntryButton:pressed {
+    background-color: #133154;
+}
+
+QPushButton#disabledTestEntry {
+    background-color: #151F2D;
+    color: #53647A;
+    border: 1px solid #25344A;
+    border-radius: 16px;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+QLabel#arduinoStatusBadge {
+    background-color: #163A31;
+    color: #55E0A0;
+    border: 1px solid #22624E;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 8px 14px;
+}
+
+QWidget#plateBoardWidget {
+    background-color: #07101C;
+    border: 2px solid #273956;
+    border-radius: 16px;
+}
+
+QLabel#selectedPlateLabel {
+    background-color: #19263A;
+    color: #DDE8F6;
+    border: 1px solid #2A3B56;
+    border-radius: 13px;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+QPushButton#plateRoarmStandbyButton {
+    background-color: #183B35;
+    color: #71E6B4;
+    border: 1px solid #2B705D;
+    border-radius: 15px;
+    font-size: 17px;
+    font-weight: 800;
+    padding: 12px 16px;
+}
+
+QPushButton#plateRoarmStandbyButton:hover {
+    background-color: #205047;
+}
+
+QPushButton#plateRoarmStandbyButton:pressed {
+    background-color: #12302B;
+}
+
+QPushButton#plateRoarmStandbyButton:disabled {
+    background-color: #202A31;
+    color: #71808D;
+    border-color: #35424C;
+}
+
+QPushButton#autoPlateTestButton {
+    background-color: #397BFF;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 17px;
+    font-size: 20px;
+    font-weight: 800;
+    padding: 14px 18px;
+}
+
+QPushButton#autoPlateTestButton:hover {
+    background-color: #4B88FF;
+}
+
+QPushButton#autoPlateTestButton:pressed {
+    background-color: #2C64D4;
+}
+
+QPushButton#stopPlateButton {
+    background-color: #4B2027;
+    color: #FFB6BE;
+    border: 1px solid #7B303B;
+    border-radius: 15px;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+QPushButton#stopPlateButton:pressed {
+    background-color: #672A34;
+}
+
+QPushButton#homePlateButton {
+    background-color: #26354D;
+    color: #F3F7FC;
+    border: 1px solid #3A4D69;
+    border-radius: 15px;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+QPushButton#homePlateButton:pressed {
+    background-color: #334660;
+}
+
+QLabel#logTitle {
+    color: #B7C5D8;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+QPlainTextEdit#plateLogView {
+    background-color: #07101C;
+    color: #C8D6E8;
+    border: 1px solid #273956;
+    border-radius: 12px;
+    font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK KR", monospace;
+    font-size: 12px;
+    padding: 8px;
+}
+
+QLabel#plateWarningLabel {
+    background-color: #302919;
+    color: #FFD47A;
+    border: 1px solid #5A4721;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px;
+}
+
+QPushButton:disabled {
+    background-color: #202A39;
+    color: #617086;
+    border-color: #2B3749;
+}
+
+
+/* QMessageBox readability on Jetson/X11.
+   The global application text is light, so native light dialogs can otherwise
+   render light text on a light background. */
+QMessageBox {
+    background-color: #F4F6F8;
+}
+
+QMessageBox QLabel {
+    color: #111111;
+    background-color: transparent;
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 0px;
+}
+
+/* Apply width only to the text label, not the icon label.
+   The old generic min-width made the icon column about 420px wide. */
+QMessageBox QLabel#qt_msgbox_label {
+    min-width: 460px;
+}
+
+QMessageBox QLabel#qt_msgboxex_icon_label {
+    min-width: 36px;
+    max-width: 52px;
+}
+
+QMessageBox QPushButton {
+    background-color: #E2E6EA;
+    color: #111111;
+    border: 1px solid #9AA3AD;
+    border-radius: 8px;
+    min-width: 96px;
+    min-height: 42px;
+    padding: 6px 14px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #D5DAE0;
+}
+
+QMessageBox QPushButton:pressed {
+    background-color: #C7CDD4;
+}
+
+
+/* -------------------------------------------------------------------------
+   Calibration pages
+   ------------------------------------------------------------------------- */
+QWidget#arucoCalibrationPage,
+QWidget#robotCalibrationPage {
+    background-color: #0B1220;
+}
+
+QFrame#calibrationCard,
+QFrame#calibrationDisplayCard,
+QFrame#calibrationControlCard {
+    background-color: #111C2E;
+    border: 1px solid #22314A;
+    border-radius: 20px;
+}
+
+QPushButton#arucoBackButton,
+QPushButton#robotCalibBackButton,
+QPushButton#calibrationAuxButton {
+    background-color: #19263A;
+    color: #EAF0F7;
+    border: 1px solid #2A3B56;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 10px 14px;
+}
+
+QPushButton#arucoBackButton:pressed,
+QPushButton#robotCalibBackButton:pressed,
+QPushButton#calibrationAuxButton:pressed {
+    background-color: #253650;
+}
+
+QPushButton#calibrationEntryButton {
+    background-color: #16365E;
+    color: #FFFFFF;
+    border: 2px solid #397BFF;
+    border-radius: 17px;
+    font-size: 18px;
+    font-weight: 800;
+    text-align: left;
+    padding: 16px 20px;
+}
+
+QPushButton#calibrationEntryButton:hover {
+    background-color: #1C457A;
+}
+
+QPushButton#calibrationEntryButton:pressed {
+    background-color: #133154;
+}
+
+QLabel#calibrationStatusBadge {
+    background-color: #163A31;
+    color: #55E0A0;
+    border: 1px solid #22624E;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 8px 14px;
+}
+
+QWidget#calibrationGuideWidget,
+QWidget#calibrationCameraLabel,
+QStackedWidget#arucoDisplayStack {
+    background-color: #07101C;
+    border: 1px solid #273956;
+    border-radius: 15px;
+    color: #B7C5D8;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+QLabel#calibrationMainStatus {
+    background-color: #19263A;
+    color: #F2F6FB;
+    border: 1px solid #2A3B56;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 800;
+    padding: 13px 15px;
+}
+
+QLabel#markerDetectionLabel {
+    background-color: #0A1524;
+    color: #C8D6E8;
+    border: 1px solid #273956;
+    border-radius: 13px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px 14px;
+}
+
+QLabel#calibrationPathLabel {
+    background-color: #0A1524;
+    color: #91A5C0;
+    border: 1px solid #273956;
+    border-radius: 12px;
+    font-size: 12px;
+    padding: 9px 11px;
+}
+
+QPushButton#calibrationStartButton {
+    background-color: #397BFF;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 16px;
+    font-size: 19px;
+    font-weight: 800;
+    padding: 13px 18px;
+}
+
+QPushButton#calibrationStartButton:hover {
+    background-color: #4B88FF;
+}
+
+QPushButton#calibrationStartButton:pressed {
+    background-color: #2C64D4;
+}
+
+QPushButton#calibrationCaptureButton {
+    background-color: #166447;
+    color: #FFFFFF;
+    border: 1px solid #2C9A70;
+    border-radius: 15px;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+QPushButton#calibrationCaptureButton:pressed {
+    background-color: #105039;
+}
+
+QPushButton#calibrationStopButton {
+    background-color: #4B2027;
+    color: #FFB6BE;
+    border: 1px solid #7B303B;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+QPushButton#calibrationStopButton:pressed {
+    background-color: #672A34;
+}
+
+QPlainTextEdit#calibrationLogView {
+    background-color: #07101C;
+    color: #C8D6E8;
+    border: 1px solid #273956;
+    border-radius: 12px;
+    font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK KR", monospace;
+    font-size: 12px;
+    padding: 8px;
+}
+
+QLabel#calibrationWarningLabel {
+    background-color: #302919;
+    color: #FFD47A;
+    border: 1px solid #5A4721;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px;
+}
+
+QProgressBar#robotCalibrationProgress {
+    background-color: #0A1524;
+    color: #FFFFFF;
+    border: 1px solid #273956;
+    border-radius: 11px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+QProgressBar#robotCalibrationProgress::chunk {
+    background-color: #397BFF;
+    border-radius: 9px;
+}
+
+
+/* v4: FitVideoWidget paints inside contentsRect; no QLabel pixmap sizeHint/cropping. */
+QWidget#cameraLabel,
+QWidget#calibrationCameraLabel {
+    padding: 0px;
+}
+
+/* -------------------------------------------------------------------------
+   Camera operation-check page (v12)
+   ------------------------------------------------------------------------- */
+QWidget#cameraTestPage {
+    background-color: #0B1220;
+}
+
+QPushButton#cameraTestEntryButton {
+    background-color: #183753;
+    color: #FFFFFF;
+    border: 2px solid #3B91D6;
+    border-radius: 16px;
+    font-size: 17px;
+    font-weight: 800;
+    text-align: left;
+    padding: 18px 20px;
+}
+QPushButton#cameraTestEntryButton:hover { background-color: #204A70; }
+QPushButton#cameraTestEntryButton:pressed { background-color: #132F49; }
+
+QPushButton#cameraTestBackButton,
+QPushButton#cameraAuxButton,
+QPushButton#cameraModeButton {
+    background-color: #19263A;
+    color: #EAF0F7;
+    border: 1px solid #2A3B56;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 8px 10px;
+}
+QPushButton#cameraModeButton:hover,
+QPushButton#cameraAuxButton:hover,
+QPushButton#cameraTestBackButton:hover {
+    background-color: #253650;
+}
+QPushButton#cameraModeButton:pressed,
+QPushButton#cameraAuxButton:pressed,
+QPushButton#cameraTestBackButton:pressed {
+    background-color: #304663;
+}
+
+QFrame#cameraTestDisplayCard,
+QFrame#cameraControlCard {
+    background-color: #111C2E;
+    border: 1px solid #22314A;
+    border-radius: 20px;
+}
+
+QWidget#cameraTestView {
+    background-color: #07101C;
+    border: 2px solid #273956;
+    border-radius: 16px;
+    color: #60738E;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+QLabel#cameraControlBadge {
+    background-color: #17354D;
+    color: #73C7FF;
+    border: 1px solid #285B80;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 8px 12px;
+}
+
+QLabel#cameraControlStatus {
+    background-color: #152238;
+    color: #C9D9EC;
+    border: 1px solid #263B58;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 11px;
+}
+
+QLabel#cameraControlLabel {
+    color: #EAF0F7;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+QLabel#cameraControlHint,
+QLabel#cameraTestNote,
+QLabel#cameraControlPath {
+    color: #8FA2BC;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#cameraControlWarning {
+    background-color: #302919;
+    color: #FFD47A;
+    border: 1px solid #5A4721;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 10px;
+}
+
+QSpinBox#cameraControlSpin,
+QComboBox#cameraControlCombo {
+    background-color: #0E1929;
+    color: #EAF0F7;
+    border: 1px solid #30445F;
+    border-radius: 9px;
+    min-height: 34px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QCheckBox#cameraAwbCheck {
+    color: #EAF0F7;
+    font-size: 14px;
+    font-weight: 700;
+    spacing: 8px;
+}
+
+QSlider#cameraControlSlider::groove:horizontal {
+    height: 8px;
+    background: #24344C;
+    border-radius: 4px;
+}
+QSlider#cameraControlSlider::sub-page:horizontal {
+    background: #4D8DFF;
+    border-radius: 4px;
+}
+QSlider#cameraControlSlider::handle:horizontal {
+    background: #FFFFFF;
+    border: 2px solid #4D8DFF;
+    width: 20px;
+    margin: -7px 0;
+    border-radius: 10px;
+}
+
+/* -------------------------------------------------------------------------
+   Robot operation-check page (v14)
+   ------------------------------------------------------------------------- */
+QPushButton#robotTestEntryButton {
+    background-color: #24334D;
+    color: #FFFFFF;
+    border: 2px solid #6D7FF2;
+    border-radius: 16px;
+    font-size: 17px;
+    font-weight: 800;
+    text-align: left;
+    padding: 18px 20px;
+}
+QPushButton#robotTestEntryButton:hover { background-color: #304469; }
+QPushButton#robotTestEntryButton:pressed { background-color: #1E2B43; }
+
+QWidget#robotTestPage { background-color: #0B1220; }
+QFrame#robotVisualCard,
+QFrame#robotControlCard {
+    background-color: #111C2E;
+    border: 1px solid #22314A;
+    border-radius: 20px;
+}
+QWidget#robotTopViewWidget {
+    background-color: #07101C;
+    border: 2px solid #273956;
+    border-radius: 16px;
+}
+QLabel#robotTestStatusBadge {
+    background-color: #17354D;
+    color: #86C8FF;
+    border: 1px solid #285B80;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 8px 12px;
+}
+QLabel#robotTestMainStatus {
+    background-color: #152238;
+    color: #E5EDF8;
+    border: 1px solid #2B4160;
+    border-radius: 13px;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 9px 11px;
+}
+QPushButton#robotTestBackButton,
+QPushButton#robotUtilityButton,
+QPushButton#robotAuxButton {
+    background-color: #19263A;
+    color: #EAF0F7;
+    border: 1px solid #30445F;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 7px 9px;
+}
+QPushButton#robotTestBackButton:hover,
+QPushButton#robotUtilityButton:hover,
+QPushButton#robotAuxButton:hover { background-color: #263A58; }
+
+QPushButton#robotSelectButton {
+    background-color: #152238;
+    color: #BFD0E4;
+    border: 2px solid #314867;
+    border-radius: 13px;
+    font-size: 13px;
+    font-weight: 800;
+}
+QPushButton#robotSelectButton:checked {
+    background-color: #285CB9;
+    color: #FFFFFF;
+    border-color: #77A9FF;
+}
+QPushButton#robotAutoTestButton {
+    background-color: #315FBE;
+    color: #FFFFFF;
+    border: 1px solid #5C91F2;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 900;
+    padding: 10px;
+}
+QPushButton#robotAutoTestButton:hover { background-color: #3D73D9; }
+QPushButton#robotAutoTestButton:pressed { background-color: #284F9F; }
+QPushButton#robotJogButton {
+    background-color: #1B2A40;
+    color: #EAF0F7;
+    border: 1px solid #3A5273;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 800;
+}
+QPushButton#robotJogButton:hover { background-color: #2A4262; }
+QPushButton#robotJogButton:pressed { background-color: #345475; }
+QLabel#robotManualTitle,
+QLabel#robotControlLabel {
+    color: #DCE7F5;
+    font-size: 13px;
+    font-weight: 800;
+}
+QComboBox#robotStepCombo {
+    background-color: #0E1929;
+    color: #EAF0F7;
+    border: 1px solid #30445F;
+    border-radius: 9px;
+    min-height: 34px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 700;
+}
+QPlainTextEdit#robotTestLog {
+    background-color: #07101C;
+    color: #C8D6E8;
+    border: 1px solid #273956;
+    border-radius: 12px;
+    font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK KR", monospace;
+    font-size: 11px;
+    padding: 8px;
+}
+QLabel#robotTestWarning {
+    background-color: #302919;
+    color: #FFD47A;
+    border: 1px solid #5A4721;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 10px;
+}

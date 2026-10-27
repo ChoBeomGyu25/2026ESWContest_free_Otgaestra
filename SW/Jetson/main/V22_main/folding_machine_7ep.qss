@@ -1,0 +1,140 @@
+/*
+ * Compact override for Waveshare 7EP-CAPLCD (1280x800).
+ * Loaded only when --display-profile 7ep is active (auto-detected by default).
+ * Keep touch targets usable while reducing vertical pressure on maintenance pages.
+ */
+QLabel#pageTitle { font-size: 21px; }
+QLabel#pageSubtitle { font-size: 12px; }
+QLabel#sectionTitle, QLabel#cardTitle { font-size: 18px; }
+QLabel#sectionNote { font-size: 12px; }
+
+QPushButton#settingsBackButton,
+QPushButton#plateBackButton,
+QPushButton#cameraTestBackButton,
+QPushButton#robotTestBackButton,
+QPushButton#arucoBackButton,
+QPushButton#robotCalibBackButton {
+    font-size: 13px;
+    padding: 6px 9px;
+    border-radius: 11px;
+}
+
+QLabel#arduinoStatusBadge,
+QLabel#cameraControlBadge,
+QLabel#robotTestStatusBadge,
+QLabel#calibrationStatusBadge {
+    font-size: 12px;
+    padding: 5px 8px;
+    border-radius: 11px;
+}
+
+QLabel#selectedPlateLabel,
+QLabel#robotTestMainStatus,
+QLabel#cameraControlStatus,
+QLabel#calibrationMainStatus,
+QLabel#markerDetectionLabel {
+    font-size: 12px;
+    padding: 6px 8px;
+}
+
+QPushButton#plateRoarmStandbyButton { font-size: 13px; padding: 7px 10px; }
+QPushButton#autoPlateTestButton { font-size: 17px; padding: 8px 12px; }
+QPushButton#stopPlateButton,
+QPushButton#homePlateButton,
+QPushButton#reconnectButton,
+QPushButton#rearmButton { font-size: 13px; }
+QPlainTextEdit#plateLogView { font-size: 10px; padding: 5px; }
+QLabel#plateWarningLabel { font-size: 11px; padding: 6px 8px; }
+
+QPushButton#cameraModeButton,
+QPushButton#cameraAuxButton { font-size: 12px; padding: 5px 7px; }
+QLabel#cameraControlLabel { font-size: 12px; }
+QLabel#cameraControlHint,
+QLabel#cameraTestNote,
+QLabel#cameraControlPath { font-size: 10px; }
+QLabel#cameraControlWarning { font-size: 10px; padding: 5px 7px; }
+QSpinBox#cameraControlSpin,
+QComboBox#cameraControlCombo { min-height: 28px; font-size: 11px; padding: 2px 6px; }
+QCheckBox#cameraAwbCheck { font-size: 12px; spacing: 6px; }
+
+QPushButton#robotSelectButton { font-size: 11px; }
+QPushButton#robotAutoTestButton { font-size: 12px; padding: 6px 8px; }
+QPushButton#robotJogButton,
+QPushButton#robotAuxButton,
+QPushButton#robotUtilityButton { font-size: 11px; padding: 4px 6px; }
+QLabel#robotManualTitle,
+QLabel#robotControlLabel { font-size: 11px; }
+QComboBox#robotStepCombo { min-height: 28px; font-size: 11px; padding: 2px 6px; }
+QPlainTextEdit#robotTestLog { font-size: 9px; padding: 5px; }
+QLabel#robotTestWarning { font-size: 10px; padding: 5px 7px; }
+
+QPushButton#calibrationStartButton,
+QPushButton#calibrationCaptureButton,
+QPushButton#calibrationAuxButton,
+QPushButton#calibrationStopButton { font-size: 12px; padding: 6px 8px; }
+QLabel#calibrationPathLabel,
+QLabel#calibrationWarningLabel { font-size: 10px; padding: 5px 7px; }
+QPlainTextEdit#calibrationLogView { font-size: 9px; padding: 5px; }
+
+/* V22 integrated main-screen compact profile for 1280x800 / 7EP.
+ * Desktop styling is intentionally untouched.
+ */
+QLabel#statusTitle { font-size: 17px; }
+QLabel#stateBadge {
+    min-height: 42px;
+    max-height: 46px;
+    font-size: 17px;
+    border-radius: 11px;
+}
+QLabel#stepCaption,
+QLabel#detectedCaption,
+QLabel#currentActionCaption,
+QLabel#timeCaption {
+    font-size: 11px;
+}
+QLabel#stepLabel { font-size: 16px; }
+QLabel#detectedValue,
+QLabel#currentActionValue,
+QLabel#timeValue {
+    font-size: 14px;
+}
+QLabel#progressText { font-size: 11px; }
+
+QLabel#currentActionValue {
+    min-height: 20px;
+    padding: 0px;
+}
+QLabel#vlaTimeoutPromptLabel {
+    min-height: 38px;
+    max-height: 58px;
+    font-size: 11px;
+    padding: 5px 7px;
+    border-radius: 9px;
+}
+QPushButton#vlaTimeoutFoldButton {
+    min-height: 42px;
+    max-height: 44px;
+    font-size: 13px;
+    padding: 5px 8px;
+    border-radius: 9px;
+}
+QLabel#noticeLabel {
+    min-height: 50px;
+    max-height: 58px;
+    font-size: 11px;
+    padding: 5px 7px;
+    border-radius: 10px;
+}
+
+QPushButton#modeToggleButton,
+QPushButton#startButton,
+QPushButton#pauseButton,
+QPushButton#emptyBoardRefreshButton,
+QPushButton#resetButton {
+    min-height: 52px;
+    max-height: 56px;
+    font-size: 15px;
+    padding: 7px 9px;
+    border-radius: 12px;
+}
+QPushButton#modeToggleButton { font-size: 14px; }
