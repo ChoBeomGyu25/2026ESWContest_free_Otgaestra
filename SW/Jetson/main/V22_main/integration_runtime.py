@@ -1508,7 +1508,7 @@ DEFAULT_MACHINE_CONFIG = Path(
     COMMON_ROOT / "calibration/dual_roarm_folding_board_config.json"
 )
 DEFAULT_HFILE = (
-    COMMON_ROOT / "calibration/elp_ov2710_folding_board_homography_cache.json"
+    COMMON_ROOT / "calibration/integrated_runtime_homography.json"
 )
 DEFAULT_BASKET_CALIB = Path(
     COMMON_ROOT / "calibration/basket_arm2_5point_affine.json"

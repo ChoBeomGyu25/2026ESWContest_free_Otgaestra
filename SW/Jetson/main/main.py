@@ -60,7 +60,12 @@ def _load_runtime():
 
 def main() -> int:
     runtime = _load_runtime()
+    hfile = DUAL_DIR.parent / "common" / "calibration" / "integrated_runtime_homography.json"
+    if not hfile.is_file():
+        raise FileNotFoundError(f"integrated homography missing: {hfile}")
+
     module_args = [
+        "--hfile", str(hfile),
         "--garment-transfer-module", str(GARMENT_TRANSFER_FILE),
         "--upper-process-module", str(UPPER_PROCESS_FILE),
         "--upper-vla-process-module", str(UPPER_VLA_PROCESS_FILE),

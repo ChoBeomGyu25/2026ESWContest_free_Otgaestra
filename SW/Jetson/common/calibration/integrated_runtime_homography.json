@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "H": [
+    [
+      -1.298518419265747,
+      -0.019269028678536415,
+      1199.66748046875
+    ],
+    [
+      -0.008919293992221355,
+      -1.2920234203338623,
+      106.1010513305664
+    ],
+    [
+      4.449193875188939e-05,
+      -5.295185837894678e-05,
+      1.0
+    ]
+  ],
+  "raw_H": [
+    [
+      -1.3142380714416504,
+      -0.027461690828204155,
+      1204.80712890625
+    ],
+    [
+      -0.0026097851805388927,
+      -1.2931485176086426,
+      109.71928405761719
+    ],
+    [
+      2.2479245672002435e-05,
+      -7.232030475279316e-05,
+      1.0
+    ]
+  ],
+  "camera_geometry": {
+    "undistort_enabled": true,
+    "calibration_path": "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/common/camera/elp_ov2710_1280x720_calibration.npz",
+    "calibration_size": [
+      1280,
+      720
+    ],
+    "input_size": [
+      1280,
+      720
+    ],
+    "output_size": [
+      1280,
+      720
+    ],
+    "alpha": 0.0,
+    "calibration_id": "4a1bdc5f60dda2210616",
+    "scaled_intrinsics": false,
+    "map_type": "CV_16SC2",
+    "camera_model": "ELP_OV2710"
+  },
+  "created_at_unix": 1790744370.610997
+}
