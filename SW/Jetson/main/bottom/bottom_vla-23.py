@@ -85,8 +85,8 @@ BOTTOM_STATE_V2_NAMES = (
     "dominant_wrinkle_linearity_norm",
     "wrinkle_vs_body_axis_angle_norm",
 )
-DEFAULT_SEG_MODEL = "/workspace/project_train/aruco_test/dual/models/kfashion_yolo26s_seg3_e100_best.engine"
-DEFAULT_POSE_MODEL = "/workspace/project_train/yolo26/bottom_pose8_beige_finetune_v2_best.engine"
+DEFAULT_SEG_MODEL = str(Path(__file__).resolve().parents[2] / "models/segmentation/kfashion_yolo26s_seg3_e100_best.engine")
+DEFAULT_POSE_MODEL = str(Path(__file__).resolve().parents[2] / "models/pose/lower/bottom_pose8_beige_finetune_v2_best.engine")
 
 
 def _sha256(path: str) -> str:
