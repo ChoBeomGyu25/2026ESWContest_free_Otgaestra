@@ -488,6 +488,7 @@ import hashlib
 import importlib.util
 import re
 import math
+from pathlib import Path
 import os
 import shutil
 import platform
@@ -1734,18 +1735,18 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 # Keep VLA aligned with the calibration files used from /workspace/project_train/aruco_test/dual.
 # The dual-arm affine/Z calibration embedded in SHARED_BOARD_CONFIG is authoritative by default.
 SHARED_CALIB_ROOT = "/workspace/project_train/aruco_test/dual"
-SHARED_BOARD_CONFIG = os.path.join(SHARED_CALIB_ROOT, "dual_roarm_folding_board_config.json")
-SHARED_BOARD_HOMOGRAPHY = os.path.join(SHARED_CALIB_ROOT, "elp_ov2710_folding_board_homography_cache.json")
-SHARED_CAMERA_CALIBRATION = os.path.join(SHARED_CALIB_ROOT, "undistort", "elp_ov2710_1280x720_calibration.npz")
+SHARED_BOARD_CONFIG = str(Path(__file__).resolve().parent.parent / "common/calibration/dual_roarm_folding_board_config.json")
+SHARED_BOARD_HOMOGRAPHY = str(Path(__file__).resolve().parent.parent / "common/calibration/integrated_runtime_homography.json")
+SHARED_CAMERA_CALIBRATION = str(Path(__file__).resolve().parent.parent / "common/camera/elp_ov2710_1280x720_calibration.npz")
 SHARED_CAMERA_CONTROLS = os.path.join(SHARED_CALIB_ROOT, "elp_ov2710_camera_controls.json")
 SHARED_VLA_ROOT = os.path.join(SHARED_CALIB_ROOT, "vla")
 SHARED_VLA_DATASET = os.path.join(SHARED_VLA_ROOT, "vla_training_data")
 SHARED_AUTO_X_LOG_DIR = os.path.join(SHARED_VLA_ROOT, "auto_x_logs")
 SHARED_VLA_SHADOW_DIR = os.path.join(SHARED_VLA_ROOT, "models", "top_board_state_micro_v2")
-SHARED_VLA_SHADOW_ENGINE = os.path.join(SHARED_VLA_SHADOW_DIR, "top_board_state_micro_v2_fp32.engine")
-SHARED_VLA_SHADOW_STATE_NORM = os.path.join(SHARED_VLA_SHADOW_DIR, "state_normalization.npz")
+SHARED_VLA_SHADOW_ENGINE = str(Path(__file__).resolve().parent.parent / "models/decision/upper/top_board_state_micro_v2/top_board_state_micro_v2_fp32.engine")
+SHARED_VLA_SHADOW_STATE_NORM = str(Path(__file__).resolve().parent.parent / "models/decision/upper/top_board_state_micro_v2/state_normalization.npz")
 SHARED_MICRO_TARGET_DIR = os.path.join(SHARED_VLA_ROOT, "models", "micro_target_v2")
-SHARED_MICRO_TARGET_ENGINE = os.path.join(SHARED_MICRO_TARGET_DIR, "micro_target_v2_fp32.engine")
+SHARED_MICRO_TARGET_ENGINE = str(Path(__file__).resolve().parent.parent / "models/decision/upper/micro_target_v2/micro_target_v2_fp32.engine")
 
 
 # vla_0833: files created from the Docker/root process on the bind-mounted project
@@ -1851,7 +1852,7 @@ USER_SETTINGS: Dict[str, Any] = {
     # Homography / YOLO 기본값
     "load_h": True,
     "auto_lock": True,
-    "grasp_model": "/workspace/project_train/aruco_test/dual/models/kfashion_yolo26s_seg3_e100_best.engine",
+    "grasp_model": str(Path(__file__).resolve().parent.parent / "models/segmentation/kfashion_yolo26s_seg3_e100_best.engine"),
     "grasp_task": "segment",
     "grasp_imgsz": 640,
     "grasp_conf": 0.25,
@@ -1861,7 +1862,7 @@ USER_SETTINGS: Dict[str, Any] = {
     # Step49: YOLO pose 기반 티셔츠 방향/회전 보정.
     # vla_0821: Synthetic 5000 -> aRTF -> 실제 폴딩보드 fine-tuning YOLO26m Pose TensorRT 사용.
     # 배포 engine은 /workspace/models 아래에 고정합니다.
-    "pose_model": "/workspace/models/tshirt_pose_yolo26m_synth_artf_board_v1_best.engine",
+    "pose_model": str(Path(__file__).resolve().parent.parent / "models/pose/upper/tshirt_pose_yolo26m_synth_artf_board_v1_best.engine"),
     "pose_imgsz": 640,
     "pose_conf": 0.25,
     "pose_kpt_conf": 0.20,
