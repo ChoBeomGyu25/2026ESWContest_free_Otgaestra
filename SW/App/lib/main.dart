@@ -21,12 +21,12 @@ final Map<String, Map<String, String>> globalLang = {
     'appTitle': '옷개스트라',
     'online': '온라인',
     'offline': '오프라인',
-    'sysStart': '시스템 시작',
+    'sysStart': '작업 시작',
     'sysStop': '시스템 종료',
     'setQty': '작업 수량 설정',
     'foldCount': '{count}벌 접기',
     'jobStart': '작업 시작',
-    'sysOffMsg': '시스템이 꺼져 있습니다.\n[시스템 시작] 버튼을 눌러 저비를 깨워주세요.',
+    'sysOffMsg': '젯슨과 연결 후 작업 시작 버튼을 눌러주세요.',
     'sysReadyMsg': '준비 완료!\n옷을 올리고 작업을 시작해보세요.',
     'machineName': '세탁물 접기 기기',
     'autoMode': '자동 모드',
@@ -73,7 +73,7 @@ final Map<String, Map<String, String>> globalLang = {
     't1Next': '다음으로',
     't2Net': '기기 연결 상태를 확인하고\nIP를 설정할 수 있어요!',
     't2MainTitle': '메인 컨트롤',
-    't2MainDesc': '이곳에서 잠든 저비를 깨우고\n원하는 옷 수량을 선택해 보세요.',
+    't2MainDesc': '이곳에서 옷 수량을 정하고\nJetson에 작업 시작 명령을 보내세요.',
     't2Stat': '저비가 아껴준 시간과 갠 옷의\n통계를 한눈에 볼 수 있어요!',
     't2DontShow': '앞으로 이 창을 열지 않습니다.',
     'menuTitle': '메뉴',
@@ -93,12 +93,12 @@ final Map<String, Map<String, String>> globalLang = {
     'appTitle': 'Clotheschestra',
     'online': 'Online',
     'offline': 'Offline',
-    'sysStart': 'Start System',
+    'sysStart': 'Start Folding',
     'sysStop': 'Stop System',
     'setQty': 'Set Quantity',
     'foldCount': 'Fold {count} items',
     'jobStart': 'Start Folding',
-    'sysOffMsg': 'System is off.\nPress [Start System] to wake up Jeoby.',
+    'sysOffMsg': 'Connect to Jetson, then start folding.',
     'sysReadyMsg': 'Ready!\nPlace the clothes and start folding.',
     'machineName': 'Laundry Folding Machine',
     'autoMode': 'Auto Mode',
@@ -198,6 +198,131 @@ class RobotArmApp extends StatelessWidget {
   }
 }
 
+// A separate route-owned widget ensures that TextFields and their controllers
+// are disposed together when the settings route actually leaves the tree.
+class _NetworkSettingsResult {
+  const _NetworkSettingsResult(this.target, this.token);
+  final String target;
+  final String token;
+}
+
+class _NetworkSettingsDialog extends StatefulWidget {
+  const _NetworkSettingsDialog({
+    required this.initialIp,
+    required this.initialToken,
+    required this.title,
+    required this.ipLabel,
+    required this.cancelLabel,
+    required this.saveLabel,
+  });
+
+  final String initialIp;
+  final String initialToken;
+  final String title;
+  final String ipLabel;
+  final String cancelLabel;
+  final String saveLabel;
+
+  @override
+  State<_NetworkSettingsDialog> createState() => _NetworkSettingsDialogState();
+}
+
+class _NetworkSettingsDialogState extends State<_NetworkSettingsDialog> {
+  late final TextEditingController _ipController;
+  late final TextEditingController _tokenController;
+  String? _validationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _ipController = TextEditingController(text: widget.initialIp);
+    _tokenController = TextEditingController(text: widget.initialToken);
+  }
+
+  @override
+  void dispose() {
+    _ipController.dispose();
+    _tokenController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final input = _ipController.text.trim();
+    final token = _tokenController.text.trim();
+    try {
+      final uri = Uri.tryParse(
+        input.startsWith('ws://') || input.startsWith('wss://')
+            ? input
+            : 'ws://$input',
+      );
+      if (uri == null ||
+          uri.host.isEmpty ||
+          uri.userInfo.isNotEmpty ||
+          !uri.hasPort ||
+          uri.port < 1 ||
+          uri.port > 65535 ||
+          (uri.path.isNotEmpty && uri.path != '/') ||
+          uri.hasQuery ||
+          uri.hasFragment ||
+          (uri.scheme != 'ws' && uri.scheme != 'wss') ||
+          token.isEmpty) {
+        setState(() => _validationError = 'IP:PORT와 Jetson 통신 키를 확인해 주세요.');
+        return;
+      }
+      final normalized = '${uri.scheme}://${uri.authority}';
+      Navigator.of(context).pop(_NetworkSettingsResult(normalized, token));
+    } catch (_) {
+      setState(() => _validationError = 'IP:PORT 형식을 확인해 주세요.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _ipController,
+            keyboardType: TextInputType.url,
+            decoration: InputDecoration(
+              labelText: widget.ipLabel,
+              hintText: '192.168.107.142:8000',
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _tokenController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Jetson 통신 키',
+              hintText: '서버 ROBOT_TOKEN과 동일하게 입력',
+            ),
+          ),
+          if (_validationError != null) ...[
+            const SizedBox(height: 10),
+            Text(_validationError!, style: const TextStyle(color: Colors.red)),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            '로컬 Wi-Fi 시험용 설정입니다. 외부 인터넷에 직접 공개하지 마세요.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(widget.cancelLabel),
+      ),
+      ElevatedButton(onPressed: _submit, child: Text(widget.saveLabel)),
+    ],
+  );
+}
+
 class ControlScreen extends StatefulWidget {
   const ControlScreen({super.key});
 
@@ -205,38 +330,47 @@ class ControlScreen extends StatefulWidget {
   State<ControlScreen> createState() => _ControlScreenState();
 }
 
-class _ControlScreenState extends State<ControlScreen> {
+// Jetson is the single source of truth for robot state and completed clothing.
+// No fake progress, fake countdown or local auto-completion timers exist here.
+class _ControlScreenState extends State<ControlScreen>
+    with WidgetsBindingObserver {
   String currentLang = 'ko';
-
   bool _showTutorial = false;
   int _tutorialStep = 0;
   bool _dontShowAgain = false;
 
   bool isConnected = false;
-  bool isSystemOn = false;
-  bool isFolding = false;
-  bool isPaused = false;
-
+  bool _hasRobotStatus = false;
+  bool _connecting = false;
+  bool _commandPending = false;
+  bool _completionProcessing = false;
+  bool _errorDialogOpen = false;
+  String _backendMode = 'UNKNOWN';
+  String _jobState = 'IDLE';
+  String _statusMessage = '';
+  String _connectionDiagnostic = '통신 서버 확인 중';
+  int _retryAttempt = 0;
+  bool _badCredentials = false;
+  String? _activeJobId;
   int totalClothes = 1;
   int currentCount = 0;
-
+  int _activeTarget = 1;
   int lifetimeFolded = 0;
-  int lifetimeTimeSavedSeconds = 0;
-  int lastSessionSavedSeconds = 0;
+  int lifetimeWorkSeconds = 0;
+  int lastSessionWorkSeconds = 0;
+  int _lastCompletedCount = 0;
+  final Set<String> _loggedJobIds = <String>{};
+  List<String> foldingLogs = <String>[];
 
-  List<String> foldingLogs = [];
-
-  Timer? _progressTimer;
-  double _currentProgress = 0.0;
-  int _remainingSeconds = 0;
-  int _clothElapsedTimeMs = 0;
-
+  String targetIp = '';
+  String _robotToken = '';
   WebSocketChannel? channel;
+  StreamSubscription<dynamic>? _wsSubscription;
   Timer? _reconnectTimer;
-  String targetIp = '172.20.10.6:8000';
-
-  static const int timePerClothSeconds = 20;
-  static const int setupTimeSeconds = 120;
+  Timer? _heartbeatTimer;
+  Timer? _authenticationTimer;
+  int _connectionEpoch = 0;
+  DateTime _lastPong = DateTime.now();
 
   static const Color clrTextMain = Color(0xFF1E293B);
   static const Color clrTextSub = Color(0xFF64748B);
@@ -245,21 +379,57 @@ class _ControlScreenState extends State<ControlScreen> {
   static const Color clrWarning = Color(0xFFF59E0B);
   static const Color clrSuccess = Color(0xFF10B981);
 
-  String t(String key, [Map<String, String>? params]) {
-    return getTrans(currentLang, key, params);
+  String t(String key, [Map<String, String>? params]) =>
+      getTrans(currentLang, key, params);
+
+  bool get isFolding => _jobState == 'RUNNING' || _jobState == 'STOP_REQUESTED';
+  bool get _canControl =>
+      isConnected &&
+      _hasRobotStatus &&
+      (_backendMode == 'DEMO_ONLY' || _backendMode == 'PHYSICAL');
+  bool get _isDemo => _backendMode == 'DEMO_ONLY';
+  String get _connectionLabel {
+    if (!isConnected) return currentLang == 'en' ? 'Disconnected' : '연결 안 됨';
+    if (!_hasRobotStatus)
+      return currentLang == 'en' ? 'Synchronizing' : '동기화 중';
+    return _isDemo ? 'TEST MODE' : t('online');
   }
 
   @override
   void initState() {
     super.initState();
-    _loadSettingsAndStats();
-    _connectWebSocket();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _loadSettingsAndStats();
+    if (mounted) _connectWebSocket();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // The mobile OS may suspend timers and sockets while in the background.
+      _lastPong = DateTime.now();
+      if (isConnected) {
+        _sendData({'status': 'GET_STATUS'}, quietly: true);
+        _sendData({'status': 'PING'}, quietly: true);
+      } else if (!_connecting) {
+        _reconnectTimer?.cancel();
+        _connectWebSocket();
+      }
+    }
   }
 
   @override
   void dispose() {
-    _progressTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _connectionEpoch++;
     _reconnectTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    _authenticationTimer?.cancel();
+    _wsSubscription?.cancel();
     channel?.sink.close();
     super.dispose();
   }
@@ -267,34 +437,76 @@ class _ControlScreenState extends State<ControlScreen> {
   Future<void> _loadSettingsAndStats() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
-      String savedLang = prefs.getString('appLanguage') ?? 'ko';
-
+      if (!mounted) return;
+      final previousLogs = prefs.getStringList('foldingLogs') ?? <String>[];
       setState(() {
-        currentLang = savedLang;
-        if (!hasSeenTutorial) {
-          _showTutorial = true;
-        }
+        targetIp = prefs.getString('robotTargetIp') ?? '';
+        _robotToken = prefs.getString('robotLabToken') ?? '';
+        currentLang = prefs.getString('appLanguage') ?? 'ko';
+        _showTutorial = !(prefs.getBool('hasSeenTutorial') ?? false);
         lifetimeFolded = prefs.getInt('savedFolded') ?? 0;
-        lifetimeTimeSavedSeconds = prefs.getInt('savedTime') ?? 0;
-        foldingLogs = prefs.getStringList('foldingLogs') ?? [];
+        // savedTime was a guessed savings formula in the previous app.
+        // Do not silently relabel that estimate as measured robot run time.
+        lifetimeWorkSeconds = prefs.getInt('savedRobotWorkSeconds') ?? 0;
+        foldingLogs = previousLogs;
+        _loggedJobIds.addAll(prefs.getStringList('loggedJobIds') ?? <String>[]);
       });
-      int beforeCleanCount = foldingLogs.length;
-      _cleanUpOldLogs();
-      if (beforeCleanCount != foldingLogs.length) {
-        _saveStatisticsData();
+      for (final raw in previousLogs) {
+        try {
+          final value = jsonDecode(raw);
+          if (value is Map && value['jobId'] is String) {
+            _loggedJobIds.add(value['jobId'] as String);
+          }
+        } catch (_) {}
       }
+      final oldCount = foldingLogs.length;
+      _cleanUpOldLogs();
+      if (oldCount != foldingLogs.length) await _saveStatisticsData();
     } catch (e) {
-      debugPrint("설정/통계 불러오기 에러: $e");
+      debugPrint('[APP] saved settings error: $e');
     }
   }
 
-  Future<void> _changeLanguage(String langCode) async {
-    setState(() {
-      currentLang = langCode;
+  Future<void> _saveStatisticsData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('foldingLogs', foldingLogs);
+      await prefs.setStringList(
+        'loggedJobIds',
+        _loggedJobIds.toList().reversed.take(300).toList(),
+      );
+      await prefs.setInt('savedFolded', lifetimeFolded);
+      await prefs.setInt('savedRobotWorkSeconds', lifetimeWorkSeconds);
+    } catch (e) {
+      debugPrint('[APP] save statistics error: $e');
+    }
+  }
+
+  void _cleanUpOldLogs() {
+    final cutoff = DateTime.now().subtract(const Duration(days: 7));
+    foldingLogs.retainWhere((raw) {
+      try {
+        final map = jsonDecode(raw);
+        if (map is! Map) return false;
+        final iso = map['recordedAt'];
+        DateTime? date = iso is String ? DateTime.tryParse(iso) : null;
+        // Historical logs have the form YYYY.MM.DD HH:MM.
+        if (date == null && map['time'] is String) {
+          date = DateTime.tryParse(
+            (map['time'] as String).replaceAll('.', '-') + ':00',
+          );
+        }
+        return date != null && date.isAfter(cutoff);
+      } catch (_) {
+        return false;
+      }
     });
+  }
+
+  Future<void> _changeLanguage(String language) async {
+    setState(() => currentLang = language);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('appLanguage', langCode);
+    await prefs.setString('appLanguage', language);
   }
 
   Future<void> _closeTutorial() async {
@@ -302,612 +514,530 @@ class _ControlScreenState extends State<ControlScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('hasSeenTutorial', true);
     }
-    setState(() {
-      _showTutorial = false;
-    });
+    if (mounted) setState(() => _showTutorial = false);
   }
 
-  void _cleanUpOldLogs() {
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    foldingLogs.retainWhere((logString) {
-      try {
-        final log = jsonDecode(logString);
-        String formattedForParse = log['time'].replaceAll('.', '-') + ':00';
-        DateTime logDate = DateTime.parse(formattedForParse);
-        return logDate.isAfter(sevenDaysAgo);
-      } catch (e) {
-        return false;
-      }
-    });
+  Uri _serverUri() {
+    final input = targetIp.trim();
+    final uri = Uri.parse(
+      input.startsWith('ws://') || input.startsWith('wss://')
+          ? input
+          : 'ws://$input',
+    );
+    return uri.replace(path: '/ws', query: null, fragment: null);
   }
 
-  Future<void> _saveStatisticsData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('savedFolded', lifetimeFolded);
-      await prefs.setInt('savedTime', lifetimeTimeSavedSeconds);
-      await prefs.setStringList('foldingLogs', foldingLogs);
-    } catch (e) {
-      debugPrint("통계 저장 에러: $e");
-    }
-  }
-
-  void _connectWebSocket() {
-    try {
-      channel = WebSocketChannel.connect(Uri.parse('ws://$targetIp'));
-      channel!.stream.listen(
-        (message) {
-          if (!isConnected) {
-            setState(() => isConnected = true);
-            _sendData({'status': 'GET_STATUS'});
-          }
-          _handleIncomingMessage(message);
-        },
-        onDone: _handleDisconnect,
-        onError: (error) => _handleDisconnect(),
-      );
-    } catch (e) {
-      _handleDisconnect();
-    }
-  }
-
-  void _handleDisconnect() {
-    if (isConnected) {
-      setState(() {
-        isConnected = false;
-        isSystemOn = false;
-        isFolding = false;
-        isPaused = false;
-      });
-      _progressTimer?.cancel();
-      _showSnackBar(t('msgDisconnect'), isError: true);
-    }
+  Future<void> _connectWebSocket() async {
+    if (!mounted || _connecting || isConnected || _badCredentials) return;
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), _connectWebSocket);
-  }
-
-  void _sendData(Map<String, dynamic> data) {
-    if (isConnected && channel != null) {
-      try {
-        channel!.sink.add(jsonEncode(data));
-      } catch (e) {
-        _handleDisconnect();
-      }
-    } else {
-      _showSnackBar(t('msgNoDevice'), isError: true);
+    if (_robotToken.trim().isEmpty) {
+      setState(() => _connectionDiagnostic = '네트워크 설정에서 Jetson 통신 키를 입력하세요.');
+      return;
     }
-  }
-
-  void _handleIncomingMessage(dynamic message) {
-    final data = jsonDecode(message);
-    final type = data['type'];
-
-    if (type == 'STATUS_UPDATE') {
-      setState(() {
-        isSystemOn = data['isSystemOn'] ?? isSystemOn;
-        isFolding = data['isFolding'] ?? isFolding;
-        isPaused = data['isPaused'] ?? isPaused;
-        currentCount = data['currentCount'] ?? currentCount;
-      });
-    } else if (type == 'ROBOT_COUNT_UP') {
-      robotCountUp();
-    } else if (type == 'ERROR') {
-      handleEmergencyStop(data['message'] ?? 'Error');
-    } else if (type == 'BASKET_FULL') {
-      handleBasketFull();
-    }
-  }
-
-  Future<void> toggleSystem() async {
-    if (isSystemOn) {
-      bool? confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: Text(
-            t('stopTitle'),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: clrTextMain,
-            ),
-          ),
-          content: Text(
-            t('stopBody'),
-            style: const TextStyle(color: clrTextSub),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(
-                t('cancel'),
-                style: const TextStyle(color: clrTextSub, fontSize: 16),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: clrDanger,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(t('stopBtn'), style: const TextStyle(fontSize: 16)),
-            ),
-          ],
-        ),
+    _connecting = true;
+    setState(() => _connectionDiagnostic = 'Jetson 연결 시도 중 ($targetIp)');
+    final epoch = ++_connectionEpoch;
+    try {
+      final candidate = WebSocketChannel.connect(_serverUri());
+      channel = candidate;
+      _wsSubscription = candidate.stream.listen(
+        (message) {
+          if (mounted && epoch == _connectionEpoch) _receiveMessage(message);
+        },
+        onDone: () => _disconnect(epoch, reason: 'Jetson 통신 서버가 연결을 종료했습니다.'),
+        onError: (Object error) {
+          debugPrint('[WS] socket error: $error');
+          _disconnect(epoch, reason: 'WebSocket 연결 오류. IP와 서버 실행 여부를 확인하세요.');
+        },
+        cancelOnError: true,
       );
-      if (confirm != true) return;
+      await candidate.ready.timeout(const Duration(seconds: 6));
+      if (!mounted || epoch != _connectionEpoch) return;
+      _connecting = false;
+      // Authenticate before accepting robot state or commands.
+      candidate.sink.add(jsonEncode({'status': 'AUTH', 'token': _robotToken}));
+      _authenticationTimer?.cancel();
+      _authenticationTimer = Timer(const Duration(seconds: 6), () {
+        if (epoch == _connectionEpoch && !isConnected) {
+          _disconnect(epoch, reason: '연결했지만 6초 안에 인증 응답을 받지 못했습니다.');
+        }
+      });
+    } catch (e) {
+      debugPrint('[WS] connect failed (${_serverUri()}): $e');
+      if (epoch == _connectionEpoch) {
+        _disconnect(epoch, reason: '서버 연결 실패. Jetson의 8000 포트와 Wi-Fi를 확인하세요.');
+      }
     }
-    resetSystemState(!isSystemOn);
   }
 
-  void resetSystemState(bool targetState) {
-    _progressTimer?.cancel();
+  void _disconnect(int epoch, {String? reason}) {
+    if (!mounted || epoch != _connectionEpoch) return;
+    ++_connectionEpoch; // Ignore onDone from an older socket.
+    final previouslyConnected = isConnected;
+    _connecting = false;
+    _commandPending = false;
+    _authenticationTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
+    channel?.sink.close();
+    channel = null;
     setState(() {
-      isSystemOn = targetState;
-      isFolding = false;
-      isPaused = false;
-      currentCount = 0;
-      _currentProgress = 0.0;
+      isConnected = false;
+      _hasRobotStatus = false;
+      _backendMode = 'UNKNOWN';
+      // Keep last robot state visible: losing Wi-Fi does NOT stop the arms.
+      _statusMessage = '통신이 끊겼습니다. 실제 로봇 상태를 현장에서 확인하세요.';
+      _connectionDiagnostic = reason ?? '연결이 끊어졌습니다. 재연결을 시도합니다.';
     });
-    _sendData({'status': isSystemOn ? 'ON' : 'OFF'});
+    if (previouslyConnected) _showSnackBar(t('msgDisconnect'), isError: true);
+    _reconnectTimer?.cancel();
+    // Limit repeated attempts when Jetson is offline; keep Flutter UI responsive.
+    const retrySeconds = [3, 5, 10, 20, 30];
+    final delay =
+        retrySeconds[_retryAttempt.clamp(0, retrySeconds.length - 1).toInt()];
+    if (_retryAttempt < retrySeconds.length - 1) _retryAttempt++;
+    _reconnectTimer = Timer(Duration(seconds: delay), _connectWebSocket);
+  }
+
+  void _restartWebSocket() {
+    _badCredentials = false;
+    _retryAttempt = 0;
+    ++_connectionEpoch;
+    _connecting = false;
+    _reconnectTimer?.cancel();
+    _authenticationTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
+    channel?.sink.close();
+    channel = null;
+    setState(() {
+      isConnected = false;
+      _hasRobotStatus = false;
+      _backendMode = 'UNKNOWN';
+    });
+    _connectWebSocket();
+  }
+
+  void _beginHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _lastPong = DateTime.now();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted || !isConnected) return;
+      if (DateTime.now().difference(_lastPong) > const Duration(seconds: 35)) {
+        _disconnect(_connectionEpoch);
+        return;
+      }
+      _sendData({'status': 'PING'}, quietly: true);
+    });
+  }
+
+  void _sendData(Map<String, dynamic> payload, {bool quietly = false}) {
+    if (!isConnected || channel == null) {
+      if (!quietly) _showSnackBar(t('msgNoDevice'), isError: true);
+      return;
+    }
+    try {
+      channel!.sink.add(jsonEncode(payload));
+    } catch (e) {
+      debugPrint('[WS] send error: $e');
+      _disconnect(_connectionEpoch);
+    }
+  }
+
+  void _receiveMessage(dynamic message) {
+    try {
+      final decoded = jsonDecode(message as String);
+      if (decoded is! Map<String, dynamic> || !mounted) return;
+      final data = decoded;
+      switch (data['type']) {
+        case 'AUTH_OK':
+          _authenticationTimer?.cancel();
+          _retryAttempt = 0;
+          setState(() {
+            isConnected = true;
+            _connectionDiagnostic = '';
+          });
+          _lastPong = DateTime.now();
+          _beginHeartbeat();
+          _sendData({'status': 'GET_STATUS'});
+          return;
+        case 'AUTH_FAILED':
+          _showSnackBar('인증 실패: 설정에서 Jetson 통신 키를 확인하세요.', isError: true);
+          // Intentional disconnect; do not retry bad credentials automatically.
+          _badCredentials = true;
+          _connectionEpoch++;
+          _heartbeatTimer?.cancel();
+          _authenticationTimer?.cancel();
+          _wsSubscription?.cancel();
+          channel?.sink.close();
+          channel = null;
+          _connecting = false;
+          if (mounted)
+            setState(() {
+              isConnected = false;
+              _hasRobotStatus = false;
+              _connectionDiagnostic = 'Jetson이 통신 키를 거부했습니다. 설정에서 키를 확인하세요.';
+            });
+          return;
+        case 'PONG':
+          _lastPong = DateTime.now();
+          return;
+        case 'STATUS_UPDATE':
+          _commandPending = false;
+          _lastPong = DateTime.now();
+          setState(() {
+            _hasRobotStatus = true;
+            _backendMode = data['source'] is String
+                ? data['source'] as String
+                : 'UNKNOWN';
+            _jobState = data['jobState'] is String
+                ? data['jobState'] as String
+                : 'IDLE';
+            _statusMessage = data['message'] is String
+                ? data['message'] as String
+                : '';
+            _activeJobId = data['activeJobId'] is String
+                ? data['activeJobId'] as String
+                : null;
+            if (data['totalTarget'] is int) {
+              _activeTarget = (data['totalTarget'] as int).clamp(1, 30).toInt();
+              if (isFolding) totalClothes = _activeTarget;
+            }
+            if (data['currentCount'] is int) {
+              currentCount = (data['currentCount'] as int)
+                  .clamp(0, _activeTarget)
+                  .toInt();
+            }
+          });
+          final last = data['lastCompletedJob'];
+          if (last is Map<String, dynamic>) _recordCompletion(last);
+          return;
+        case 'JOB_COMPLETED':
+          _commandPending = false;
+          _recordCompletion(data);
+          return;
+        case 'COMMAND_REJECTED':
+          setState(() => _commandPending = false);
+          _showSnackBar(
+            '${data['message'] ?? '명령을 수행할 수 없습니다.'}',
+            isError: true,
+          );
+          return;
+        case 'ERROR':
+          setState(() => _commandPending = false);
+          _showError('${data['message'] ?? 'Jetson이 오류를 보고했습니다.'}');
+          return;
+        default:
+          debugPrint('[WS] unrecognized server payload: ${data['type']}');
+      }
+    } catch (e) {
+      debugPrint('[WS] invalid JSON or payload: $e');
+    }
+  }
+
+  // Logs are written only for a uniquely identified Jetson completion flag.
+  // STATUS_UPDATE alone can never increment historical statistics.
+  Future<void> _recordCompletion(Map<String, dynamic> data) async {
+    final id = data['jobId'];
+    final count = data['completedCount'];
+    if (!mounted ||
+        id is! String ||
+        id.isEmpty ||
+        count is! int ||
+        count < 1 ||
+        _loggedJobIds.contains(id) ||
+        _completionProcessing)
+      return;
+    _completionProcessing = true;
+    try {
+      final seconds = data['durationSeconds'] is num
+          ? (data['durationSeconds'] as num).round().clamp(0, 864000).toInt()
+          : 0;
+      if (_isDemo) {
+        _loggedJobIds.add(id);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('loggedJobIds', _loggedJobIds.toList());
+        if (mounted) {
+          setState(() {
+            _jobState = 'IDLE';
+            _lastCompletedCount = count;
+          });
+          _showSnackBar('통신 테스트 완료: $count벌 (통계에는 기록하지 않음)');
+        }
+        return;
+      }
+      if (_backendMode != 'PHYSICAL') return;
+      final timestamp = data['completedAt'];
+      final now =
+          (timestamp is String
+              ? DateTime.tryParse(timestamp)?.toLocal()
+              : null) ??
+          DateTime.now();
+      final newLog = <String, dynamic>{
+        'jobId': id,
+        'recordedAt': now.toIso8601String(),
+        'time':
+            '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} '
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+        'count': count,
+        'durationSeconds': seconds,
+      };
+      // Mutate once; persist before the popup, so reconnection doesn't recount.
+      _loggedJobIds.add(id);
+      setState(() {
+        _jobState = 'IDLE';
+        _activeJobId = null;
+        _lastCompletedCount = count;
+        lastSessionWorkSeconds = seconds;
+        lifetimeFolded += count;
+        lifetimeWorkSeconds += seconds;
+        foldingLogs.insert(0, jsonEncode(newLog));
+        _cleanUpOldLogs();
+      });
+      await _saveStatisticsData();
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showCompletionPopup(count, seconds);
+        });
+      }
+    } finally {
+      _completionProcessing = false;
+    }
   }
 
   void startFolding() {
-    setState(() {
-      isFolding = true;
-      isPaused = false;
-      currentCount = 0;
-      _currentProgress = 0.0;
-      _remainingSeconds = totalClothes * timePerClothSeconds;
-      _clothElapsedTimeMs = 0;
-    });
+    if (!_canControl || isFolding || _commandPending) return;
+    setState(() => _commandPending = true);
     _sendData({'status': 'START_FOLDING', 'total_target': totalClothes});
-    _startProgressTimer();
+    // A command is a request. Only Jetson STATUS_UPDATE means arms are running.
   }
 
-  void _startProgressTimer() {
-    _progressTimer?.cancel();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!isFolding || isPaused) return;
-
-      setState(() {
-        _clothElapsedTimeMs += 100;
-
-        if (!isConnected &&
-            _clothElapsedTimeMs >= (timePerClothSeconds * 1000)) {
-          robotCountUp();
-          return;
-        }
-
-        double chunkSize = 1.0 / totalClothes;
-        double currentClothProgress =
-            (_clothElapsedTimeMs / (timePerClothSeconds * 1000)).clamp(
-              0.0,
-              0.99,
-            );
-        _currentProgress =
-            (currentCount / totalClothes) + (currentClothProgress * chunkSize);
-
-        int currentClothRemainingMs =
-            (timePerClothSeconds * 1000) - _clothElapsedTimeMs;
-        if (currentClothRemainingMs < 0) currentClothRemainingMs = 0;
-
-        _remainingSeconds =
-            ((totalClothes - currentCount - 1) * timePerClothSeconds) +
-            (currentClothRemainingMs ~/ 1000);
-        if (_remainingSeconds < 0) _remainingSeconds = 0;
-      });
-    });
-  }
-
-  void togglePause() {
-    setState(() {
-      isPaused = !isPaused;
-    });
-    _sendData({'status': isPaused ? 'PAUSE' : 'RESUME'});
-  }
-
-  void robotCountUp() {
-    if (!isFolding || isPaused) return;
-
-    setState(() {
-      currentCount++;
-      _clothElapsedTimeMs = 0;
-    });
-
-    if (currentCount >= totalClothes) {
-      _progressTimer?.cancel();
-      int sessionTime = (totalClothes * timePerClothSeconds) + setupTimeSeconds;
-
-      DateTime dt = DateTime.now();
-      String formattedDate =
-          '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-
-      Map<String, dynamic> newLog = {
-        'time': formattedDate,
-        'count': totalClothes,
-      };
-
-      setState(() {
-        _currentProgress = 1.0;
-        _remainingSeconds = 0;
-        lifetimeFolded += totalClothes;
-        lifetimeTimeSavedSeconds += sessionTime;
-        lastSessionSavedSeconds = sessionTime;
-
-        _cleanUpOldLogs();
-        foldingLogs.insert(0, jsonEncode(newLog));
-      });
-
-      _saveStatisticsData();
-
-      Future.delayed(const Duration(milliseconds: 500), () {
-        setState(() {
-          isFolding = false;
-          isSystemOn = false;
-        });
-        _sendData({'status': 'OFF'});
-        showCompletionPopup();
-      });
-    }
-  }
-
-  void handleBasketFull() {
-    if (!isFolding || isPaused) return;
-    setState(() => isPaused = true);
-    _sendData({'status': 'PAUSE'});
-
-    showDialog(
+  Future<void> requestStop() async {
+    if (!_canControl || !isFolding || _commandPending) return;
+    final shouldStop = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.shopping_basket, color: clrWarning, size: 30),
-            const SizedBox(width: 10),
-            Text(
-              t('fullTitle'),
-              style: const TextStyle(
-                color: clrWarning,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          t('fullBody'),
-          style: const TextStyle(fontSize: 16, height: 1.5, color: clrTextMain),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              togglePause();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: clrWarning,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(t('continueBtn'), style: const TextStyle(fontSize: 16)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void handleEmergencyStop(String errorMessage) {
-    _progressTimer?.cancel();
-    setState(() {
-      isFolding = false;
-      isSystemOn = false;
-      isPaused = false;
-      _currentProgress = 0.0;
-    });
-    _sendData({'status': 'EMERGENCY_STOP'});
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: clrDanger, size: 30),
-            const SizedBox(width: 10),
-            Text(
-              t('errTitle'),
-              style: const TextStyle(
-                color: clrDanger,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          errorMessage,
-          style: const TextStyle(fontSize: 18, color: clrTextMain),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: clrDanger,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(t('ok'), style: const TextStyle(fontSize: 16)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showIpSettingsDialog() {
-    TextEditingController ipController = TextEditingController(text: targetIp);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          t('netTitle'),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: clrTextMain,
-          ),
-        ),
-        content: TextField(
-          controller: ipController,
-          decoration: InputDecoration(
-            labelText: t('netLabel'),
-            labelStyle: const TextStyle(color: clrMainBlue),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: clrMainBlue),
-            ),
-          ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('작업 중지 요청'),
+        content: const Text(
+          '진행 중인 작업을 Jetson에 중지 요청할까요? '
+          '이 버튼은 물리 비상정지 장치를 대신하지 않습니다.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(t('cancel'), style: const TextStyle(color: clrTextSub)),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t('cancel')),
           ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => targetIp = ipController.text);
-              Navigator.pop(context);
-              channel?.sink.close();
-              _connectWebSocket();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: clrMainBlue,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(t('save')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t('stopBtn')),
           ),
         ],
       ),
     );
+    if (shouldStop != true || !mounted) return;
+    setState(() => _commandPending = true);
+    _sendData({'status': 'STOP_JOB'});
+  }
+
+  void _showError(String message) {
+    if (!mounted || _errorDialogOpen) return;
+    _errorDialogOpen = true;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('errTitle')),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('ok'))),
+        ],
+      ),
+    ).whenComplete(() => _errorDialogOpen = false);
+  }
+
+  Future<void> _showIpSettingsDialog() async {
+    // Keep TextEditingControllers inside the dialog State.  Disposing them
+    // from showDialog().whenComplete can race the route's reverse animation.
+    final result = await showDialog<_NetworkSettingsResult>(
+      context: context,
+      builder: (_) => _NetworkSettingsDialog(
+        initialIp: targetIp,
+        initialToken: _robotToken,
+        title: t('netTitle'),
+        ipLabel: t('netLabel'),
+        cancelLabel: t('cancel'),
+        saveLabel: t('save'),
+      ),
+    );
+    if (!mounted || result == null) return;
+
+    // Do not rebuild/reconnect while the settings route is being torn down.
+    // The dialog owns and disposes its text controllers in its own dispose().
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    setState(() {
+      targetIp = result.target;
+      _robotToken = result.token;
+      _connectionDiagnostic = '변경된 Jetson 주소로 연결 중입니다.';
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('robotTargetIp', result.target);
+      // For a trusted lab LAN only. Real deployments need secure storage/TLS.
+      await prefs.setString('robotLabToken', result.token);
+    } catch (e) {
+      debugPrint('[APP] save network configuration failed: $e');
+      if (mounted)
+        _showSnackBar(
+          '설정을 저장하지 못했습니다. 앱을 재시작하면 이전 설정으로 돌아갈 수 있어요.',
+          isError: true,
+        );
+    }
+    if (!mounted) return;
+    _restartWebSocket();
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? clrDanger : clrMainBlue,
-        duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
       ),
     );
   }
 
-  String formatSeconds(int totalSeconds) {
-    int m = totalSeconds ~/ 60;
-    int s = totalSeconds % 60;
-    if (m == 0) return '$s${t('s')}';
-    return '$m${t('m')} $s${t('s')}';
+  String formatDashboardTime(int seconds) {
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    if (h > 0) return '${h}시간 ${m}분';
+    if (m > 0) return '${m}분 ${s}초';
+    return '${s}초';
   }
 
-  String _formatDigitalTimer(int totalSeconds) {
-    int m = totalSeconds ~/ 60;
-    int s = totalSeconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
-  String formatDashboardTime(int totalSeconds) {
-    int h = totalSeconds ~/ 3600;
-    int m = (totalSeconds % 3600) ~/ 60;
-    int s = totalSeconds % 60;
-    if (h > 0)
-      return '$h${t('h')} $m${t('m')}';
-    else if (m > 0)
-      return '$m${t('m')} $s${t('s')}';
-    else
-      return '$s${t('s')}';
-  }
-
-  void showCompletionPopup() {
-    showDialog(
+  void _showCompletionPopup(int count, int seconds) {
+    showDialog<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.check_circle, color: clrMainBlue, size: 30),
+            const Icon(Icons.check_circle, color: clrMainBlue),
             const SizedBox(width: 10),
-            Text(
-              t('doneTitle'),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: clrTextMain,
-              ),
-            ),
+            Text(t('doneTitle')),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              t('doneBody1', {'count': '$totalClothes'}),
-              style: const TextStyle(fontSize: 16, color: clrTextMain),
-            ),
-            const SizedBox(height: 15),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: clrMainBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                t('doneBody2', {
-                  'time': formatSeconds(lastSessionSavedSeconds),
-                }),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: clrMainBlue,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+        content: Text(
+          '${count}벌의 접기 완료 신호를 Jetson에서 받았습니다.\n'
+          '실제 작업 시간: ${formatDashboardTime(seconds)}',
         ),
         actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: clrMainBlue,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(t('ok'), style: const TextStyle(fontSize: 16)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('ok'))),
         ],
       ),
     );
   }
 
   void showDataDashboard() {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.only(
-          left: 25.0,
-          right: 25.0,
-          top: 25.0,
-          bottom: 40.0,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.bar_chart, color: clrTextMain, size: 28),
-                    const SizedBox(width: 10),
-                    Text(
-                      t('statsTitle'),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: clrTextMain,
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(sheetContext),
-                  child: Text(
-                    t('close'),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 5, 20, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    t('statsTitle'),
                     style: const TextStyle(
-                      color: clrTextSub,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const Divider(height: 20, thickness: 1),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    title: t('foldedLabel'),
-                    value: '$lifetimeFolded',
+                  IconButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close),
                   ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: _buildStatCard(
-                    title: t('savedLabel'),
-                    value: formatDashboardTime(lifetimeTimeSavedSeconds),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 25),
-            Text(
-              t('recentLogs'),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: clrTextMain,
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: foldingLogs.isEmpty
-                  ? Center(
-                      child: Text(
-                        t('noLogs'),
-                        style: const TextStyle(color: clrTextSub),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      itemCount: foldingLogs.length,
-                      separatorBuilder: (context, index) =>
-                          Divider(height: 1, color: Colors.grey[200]),
-                      itemBuilder: (context, index) {
-                        final log = jsonDecode(foldingLogs[index]);
-                        return ListTile(
-                          title: Text(
-                            t('logDone', {'count': '${log['count']}'}),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: clrTextMain,
-                            ),
-                          ),
-                          trailing: Text(
-                            log['time'],
-                            style: const TextStyle(
-                              color: clrTextSub,
-                              fontSize: 13,
-                            ),
-                          ),
-                        );
-                      },
+              const Divider(),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      title: t('foldedLabel'),
+                      value: '$lifetimeFolded',
                     ),
-            ),
-          ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      title: currentLang == 'en'
+                          ? 'Robot runtime'
+                          : '누적 로봇 작업 시간',
+                      value: formatDashboardTime(lifetimeWorkSeconds),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                t('recentLogs'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 240,
+                child: foldingLogs.isEmpty
+                    ? Center(child: Text(t('noLogs')))
+                    : ListView.separated(
+                        itemCount: foldingLogs.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final entry =
+                              jsonDecode(foldingLogs[index])
+                                  as Map<String, dynamic>;
+                          final count = entry['count'] ?? 0;
+                          final duration = entry['durationSeconds'];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              t('logDone', {'count': '$count'}),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: duration is num
+                                ? Text(
+                                    '로봇 작업 시간: ${formatDashboardTime(duration.round())}',
+                                  )
+                                : null,
+                            trailing: Text(
+                              '${entry['time'] ?? ''}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -915,27 +1045,20 @@ class _ControlScreenState extends State<ControlScreen> {
 
   Widget _buildStatCard({required String title, required String value}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: clrMainBlue.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
+        color: clrMainBlue.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: clrTextSub,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontSize: 12, color: clrTextSub)),
+          const SizedBox(height: 5),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: clrMainBlue,
             ),
@@ -945,9 +1068,6 @@ class _ControlScreenState extends State<ControlScreen> {
     );
   }
 
-  // ==========================================================
-  // 🍔 사이드 메뉴(Drawer) 위젯 모음
-  // ==========================================================
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
@@ -1405,48 +1525,46 @@ class _ControlScreenState extends State<ControlScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isStopping = _jobState == 'STOP_REQUESTED';
+    final isError = _jobState == 'ERROR';
+    final canStart = _canControl && !isFolding && !isError && !_commandPending;
     return Stack(
       children: [
-        // ----- 메인 앱 화면 시작 -----
         Scaffold(
           drawer: _buildDrawer(),
           appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            iconTheme: const IconThemeData(color: clrTextMain),
             title: Text(
               t('appTitle'),
               style: const TextStyle(
-                fontWeight: FontWeight.w800,
                 color: clrTextMain,
                 fontSize: 22,
+                fontWeight: FontWeight.w800,
               ),
             ),
+            iconTheme: const IconThemeData(color: clrTextMain),
             actions: [
               Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isConnected
-                      ? clrSuccess.withOpacity(0.1)
-                      : clrDanger.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
+                  color: isConnected
+                      ? clrSuccess.withOpacity(.1)
+                      : clrDanger.withOpacity(.08),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.circle,
+                      size: 9,
                       color: isConnected ? clrSuccess : clrDanger,
-                      size: 10,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      isConnected ? t('online') : t('offline'),
+                      _connectionLabel,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: isConnected ? clrSuccess : clrDanger,
                       ),
@@ -1454,67 +1572,17 @@ class _ControlScreenState extends State<ControlScreen> {
                   ],
                 ),
               ),
-
               PopupMenuButton<String>(
                 icon: const Icon(Icons.language, color: clrTextSub),
                 onSelected: _changeLanguage,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: 'ko',
-                    child: Row(
-                      children: [
-                        Text('🇰🇷', style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 10),
-                        Text('한국어'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'en',
-                    child: Row(
-                      children: [
-                        Text('🇺🇸', style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 10),
-                        Text('English'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'zh',
-                    child: Row(
-                      children: [
-                        Text('🇨🇳', style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 10),
-                        Text('中文'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'ja',
-                    child: Row(
-                      children: [
-                        Text('🇯🇵', style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 10),
-                        Text('日本語'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'es',
-                    child: Row(
-                      children: [
-                        Text('🇪🇸', style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 10),
-                        Text('Español'),
-                      ],
-                    ),
-                  ),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'ko', child: Text('🇰🇷 한국어')),
+                  PopupMenuItem(value: 'en', child: Text('🇺🇸 English')),
+                  PopupMenuItem(value: 'zh', child: Text('🇨🇳 中文')),
+                  PopupMenuItem(value: 'ja', child: Text('🇯🇵 日本語')),
+                  PopupMenuItem(value: 'es', child: Text('🇪🇸 Español')),
                 ],
               ),
-
               IconButton(
                 icon: const Icon(Icons.settings, color: clrTextSub),
                 onPressed: _showIpSettingsDialog,
@@ -1522,417 +1590,285 @@ class _ControlScreenState extends State<ControlScreen> {
             ],
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 10.0,
-            ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (!isSystemOn)
-                  ElevatedButton(
-                    onPressed: toggleSystem,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      backgroundColor: clrMainBlue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
+                if (!_canControl) ...[
+                  Container(
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: clrWarning.withOpacity(.12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(
-                      t('sysStart'),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )
-                else
-                  OutlinedButton(
-                    onPressed: toggleSystem,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      foregroundColor: clrDanger,
-                      side: const BorderSide(color: clrDanger, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      t('sysStop'),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _robotToken.isEmpty
+                              ? '통신 설정에서 IP와 Jetson 통신 키를 입력하세요.'
+                              : _connectionDiagnostic,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: clrTextMain,
+                          ),
+                        ),
+                        Text(
+                          '설정 주소: $targetIp',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: clrTextSub,
+                          ),
+                        ),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            TextButton.icon(
+                              onPressed: _showIpSettingsDialog,
+                              icon: const Icon(Icons.wifi),
+                              label: Text(t('netTitle')),
+                            ),
+                            TextButton.icon(
+                              onPressed: _robotToken.isEmpty
+                                  ? _showIpSettingsDialog
+                                  : _restartWebSocket,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('지금 재연결'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-
-                const SizedBox(height: 30),
-
+                  const SizedBox(height: 18),
+                ],
+                if (_isDemo) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: clrWarning.withOpacity(.12),
+                    ),
+                    child: const Text(
+                      '통신 시험 모드: 로봇팔은 실제로 움직이지 않고 통계도 저장하지 않습니다.',
+                      style: TextStyle(fontSize: 12, color: clrTextMain),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_statusMessage.isNotEmpty &&
+                    (isError || !isConnected || isStopping)) ...[
+                  Container(
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: (isError ? clrDanger : clrWarning).withOpacity(.1),
+                    ),
+                    child: Text(
+                      _statusMessage,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 if (!isFolding) ...[
                   Text(
                     t('setQty'),
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
                       color: clrTextMain,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 5,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      border: Border.all(color: Colors.black12),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int>(
-                        value: totalClothes,
                         isExpanded: true,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: clrTextSub,
+                        value: totalClothes,
+                        items: List.generate(
+                          30,
+                          (index) => DropdownMenuItem(
+                            value: index + 1,
+                            child: Text(
+                              t('foldCount', {'count': '${index + 1}'}),
+                            ),
+                          ),
                         ),
-                        focusColor: Colors.transparent,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: clrTextMain,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        onChanged: isSystemOn
-                            ? (int? newValue) =>
-                                  setState(() => totalClothes = newValue!)
+                        onChanged: canStart
+                            ? (value) {
+                                if (value != null)
+                                  setState(() => totalClothes = value);
+                              }
                             : null,
-                        items: List.generate(30, (index) => index + 1)
-                            .map<DropdownMenuItem<int>>((int value) {
-                              return DropdownMenuItem<int>(
-                                value: value,
-                                child: Text(
-                                  t('foldCount', {'count': '$value'}),
-                                ),
-                              );
-                            })
-                            .toList(),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 25),
-
-                  if (isSystemOn)
-                    ElevatedButton(
-                      onPressed: startFolding,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        backgroundColor: clrMainBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 3,
-                        shadowColor: clrMainBlue.withOpacity(0.4),
-                      ),
+                  const SizedBox(height: 22),
+                  ElevatedButton.icon(
+                    onPressed: canStart ? startFolding : null,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 25),
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       child: Text(
-                        t('jobStart'),
+                        _commandPending ? 'Jetson 응답 대기 중' : t('jobStart'),
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 19,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-
-                  const SizedBox(height: 50),
-                  Center(
-                    child: Column(
-                      children: [
-                        CuteRobot(
-                          state: isSystemOn
-                              ? RobotState.idle
-                              : RobotState.paused,
-                        ),
-                        const SizedBox(height: 25),
-                        Text(
-                          !isSystemOn ? t('sysOffMsg') : t('sysReadyMsg'),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: clrTextSub,
-                            height: 1.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: clrMainBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
-                ],
-
-                if (isSystemOn && isFolding) ...[
+                  const SizedBox(height: 36),
+                  CuteRobot(
+                    state: isError ? RobotState.paused : RobotState.idle,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isError
+                        ? 'Jetson 오류를 현장에서 확인한 뒤 복구하세요.'
+                        : _canControl
+                        ? '준비 완료! 수량을 선택하고 작업을 시작하세요.'
+                        : 'Jetson과 연결하면 작업을 시작할 수 있어요.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: clrTextSub, fontSize: 15),
+                  ),
+                ] else ...[
                   Card(
                     elevation: 0,
                     color: Colors.white,
                     shape: RoundedRectangleBorder(
+                      side: const BorderSide(color: Colors.black12),
                       borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: Colors.grey.withOpacity(0.2)),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(25.0),
+                      padding: const EdgeInsets.all(23),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.inventory_2_outlined,
-                                    color: clrTextSub,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    t('machineName'),
-                                    style: const TextStyle(
-                                      color: clrTextSub,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                t('machineName'),
+                                style: const TextStyle(
+                                  color: clrTextSub,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0FDF4),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.circle,
-                                      color: clrSuccess,
-                                      size: 8,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      t('autoMode'),
-                                      style: const TextStyle(
-                                        color: clrSuccess,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                              const Text(
+                                '자동 모드',
+                                style: TextStyle(
+                                  color: clrSuccess,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 35),
+                          const SizedBox(height: 30),
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      t('foldingNow'),
+                                      isStopping
+                                          ? '중지 신호 처리 중'
+                                          : t('foldingNow'),
                                       style: const TextStyle(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w900,
+                                        fontSize: 25,
                                         color: clrTextMain,
+                                        fontWeight: FontWeight.w900,
                                       ),
                                     ),
-                                    const SizedBox(height: 15),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
-                                      children: [
-                                        Text(
-                                          t('timeLeft'),
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            color: clrTextSub,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 15),
-                                        Text(
-                                          _formatDigitalTimer(
-                                            _remainingSeconds,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 48,
-                                            fontWeight: FontWeight.bold,
-                                            color: isPaused
-                                                ? clrWarning
-                                                : clrMainBlue,
-                                            height: 1.0,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      isPaused
-                                          ? t('pausedMsg')
-                                          : t('foldingMsg'),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Jetson 실제 완료 수량',
                                       style: TextStyle(
-                                        fontSize: 15,
-                                        color: isPaused
-                                            ? clrWarning
-                                            : clrTextSub,
+                                        fontSize: 13,
+                                        color: clrTextSub,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$currentCount / $_activeTarget 벌',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        color: clrMainBlue,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               CuteRobot(
-                                state: isPaused
+                                state: isStopping
                                     ? RobotState.paused
                                     : RobotState.working,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 45),
-                          Row(
-                            children: [
-                              Text(
-                                t('progress'),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: clrTextSub,
-                                ),
-                              ),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: LinearProgressIndicator(
-                                    value: _currentProgress,
-                                    minHeight: 6,
-                                    backgroundColor: const Color(0xFFF1F5F9),
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      isPaused ? clrWarning : clrMainBlue,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 15),
-                              Text(
-                                '${(_currentProgress * 100).toInt()}%',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isPaused ? clrWarning : clrMainBlue,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 35),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 15,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.checkroom,
-                                  color: clrMainBlue,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 15),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        currentCount >= totalClothes - 1
-                                            ? t('nextFinal')
-                                            : t('nextFold'),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: clrTextMain,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        t('currentProgress', {
-                                          'total': '$totalClothes',
-                                          'current': '${currentCount + 1}',
-                                        }),
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: clrTextSub,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: Colors.grey,
-                                ),
-                              ],
+                          const SizedBox(height: 20),
+                          Text(
+                            isStopping
+                                ? '현장의 로봇이 안전하게 정지했다는 확인 신호를 기다리고 있습니다.'
+                                : '로봇이 완료 신호를 보낼 때마다 수량이 바뀝니다.\n'
+                                      '모든 작업을 마치면 Jetson이 종료를 알려줍니다.',
+                            style: const TextStyle(
+                              color: clrTextSub,
+                              fontSize: 13,
+                              height: 1.5,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 15),
-                  TextButton.icon(
-                    onPressed: togglePause,
-                    icon: Icon(
-                      isPaused ? Icons.play_arrow : Icons.pause,
-                      color: clrTextSub,
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: isStopping || !_canControl || _commandPending
+                        ? null
+                        : requestStop,
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      child: Text(isStopping ? '정지 확인 대기 중' : '작업 중지 요청'),
                     ),
-                    label: Text(
-                      isPaused ? t('resume') : t('pause'),
-                      style: const TextStyle(color: clrTextSub, fontSize: 16),
-                    ),
+                    style: OutlinedButton.styleFrom(foregroundColor: clrDanger),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '앱의 중지 요청은 물리 비상정지 버튼이 아닙니다.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: clrTextSub),
                   ),
                 ],
-
-                const SizedBox(height: 30),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: showDataDashboard,
-                    icon: const Icon(Icons.insights, color: clrTextSub),
-                    label: Text(
-                      t('statsBtn'),
-                      style: const TextStyle(
-                        color: clrTextSub,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                const SizedBox(height: 26),
+                TextButton.icon(
+                  onPressed: showDataDashboard,
+                  icon: const Icon(Icons.insights, color: clrTextSub),
+                  label: Text(
+                    t('statsBtn'),
+                    style: const TextStyle(color: clrTextSub),
                   ),
                 ),
-                const SizedBox(height: 50),
               ],
             ),
           ),
         ),
-        // ----- 메인 앱 화면 끝 -----
-
-        // 🌟 튜토리얼 켜져있을 때 오버레이 출력 🌟
         if (_showTutorial) _buildTutorialOverlay(),
       ],
     );
@@ -2036,17 +1972,14 @@ class _JeobyCodyScreenState extends State<JeobyCodyScreen> {
     }
   }
 
-  Future<String> _getLocationName(
-    double latitude,
-    double longitude,
-  ) async {
+  Future<String> _getLocationName(double latitude, double longitude) async {
     try {
       final url = Uri.parse(
         'https://api.bigdatacloud.net/data/reverse-geocode-client'
         '?latitude=$latitude&longitude=$longitude&localityLanguage=ko',
       );
 
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final candidates = [
@@ -2096,7 +2029,7 @@ class _JeobyCodyScreenState extends State<JeobyCodyScreen> {
         '&current_weather=true&timezone=auto',
       );
 
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final temp = data['current_weather']['temperature'];
@@ -2126,7 +2059,7 @@ class _JeobyCodyScreenState extends State<JeobyCodyScreen> {
             _currentWeather = 'sunny';
         });
 
-        _askJeobyAI();
+        if (mounted) _askJeobyAI();
       } else {
         if (!mounted) return;
         setState(() {
@@ -2147,6 +2080,7 @@ class _JeobyCodyScreenState extends State<JeobyCodyScreen> {
   }
 
   Future<void> _askJeobyAI() async {
+    if (!mounted || _isThinking) return;
     if (myClothes.isEmpty) {
       setState(() => _aiMessage = '옷장에 옷이 없어요!\n[옷 등록]을 눌러 채워주세요.');
       return;
@@ -2197,13 +2131,17 @@ class _JeobyCodyScreenState extends State<JeobyCodyScreen> {
       ''';
 
       final content = [Content.text(prompt)];
-      final response = await model.generateContent(content);
+      final response = await model
+          .generateContent(content)
+          .timeout(const Duration(seconds: 25));
+      if (!mounted) return;
 
       setState(() {
         _aiMessage = response.text?.trim() ?? '저비의 회로가 잠시 꼬였어요! 다시 시도해주세요.';
         _isThinking = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _aiMessage = '에러 원인: ${e.toString()}';
         _isThinking = false;

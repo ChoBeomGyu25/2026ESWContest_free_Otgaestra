@@ -48,6 +48,7 @@ import subprocess
 import sys
 import threading
 import time
+import otgaestra_app_ipc as app_ipc
 from pathlib import Path
 from typing import Any, Deque, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -77,8 +78,14 @@ except Exception:
 
 
 BUILD = "2026-10-01-v38-small-display-compact-ui"
-DEFAULT_SEG_MODEL = str(Path(__file__).resolve().parents[2] / "models" / "segmentation" / "kfashion_yolo26s_seg3_e100_best.engine")
-DEFAULT_TOP_BOTTOM_MODEL = str(Path(__file__).resolve().parents[2] / "models" / "classification" / "top_bottom" / "top_bottom_vla_finetune_mix5_e8_v1_best.pt")
+DEFAULT_SEG_MODEL = (
+    "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/models/segmentation/"
+    "kfashion_yolo26s_seg3_e100_best.engine"
+)
+DEFAULT_TOP_BOTTOM_MODEL = (
+    "/workspace/project_train/models/top_bottom_cls/"
+    "top_bottom_vla_finetune_mix5_e8_v1_best.pt"
+)
 
 
 # -----------------------------------------------------------------------------
@@ -1480,9 +1487,6 @@ V8 adds orientation-aware segmentation: 0-degree inference is preferred, while r
 # V22 shared-camera integration runtime
 # -----------------------------------------------------------------------------
 DUAL_ROOT = HERE.parent
-JETSON_ROOT = DUAL_ROOT.parent
-MODEL_ROOT = JETSON_ROOT / "models"
-COMMON_ROOT = JETSON_ROOT / "common"
 if str(DUAL_ROOT) not in sys.path:
     sys.path.insert(0, str(DUAL_ROOT))
 
@@ -1499,31 +1503,31 @@ DEFAULT_EMPTY_BOARD = DUAL_ROOT / "d34_empty_board.png"
 # currently contains the validated V3 light-augmentation FP32 TensorRT engine.
 # CLI --integration-upper-vla-model / --integration-upper-vla-state-norm still override these defaults.
 DEFAULT_UPPER_VLA_ENGINE = Path(
-    MODEL_ROOT / "decision/upper/top_board_state_micro_v2/top_board_state_micro_v2_fp32.engine"
+    "/workspace/project_train/aruco_test/dual/vla/models/top_board_state_micro_v2/top_board_state_micro_v2_fp32.engine"
 )
 DEFAULT_UPPER_VLA_STATE_NORM = Path(
-    MODEL_ROOT / "decision/upper/top_board_state_micro_v2/state_normalization.npz"
+    "/workspace/project_train/aruco_test/dual/vla/models/top_board_state_micro_v2/state_normalization.npz"
 )
 DEFAULT_MACHINE_CONFIG = Path(
-    COMMON_ROOT / "calibration/dual_roarm_folding_board_config.json"
+    "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/common/calibration/dual_roarm_folding_board_config.json"
 )
 DEFAULT_HFILE = (
-    COMMON_ROOT / "calibration/integrated_runtime_homography.json"
+    DUAL_ROOT / "elp_ov2710_folding_board_homography_cache.json"
 )
 DEFAULT_BASKET_CALIB = Path(
-    COMMON_ROOT / "calibration/basket_arm2_5point_affine.json"
+    "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/common/calibration/basket_arm2_5point_affine.json"
 )
 DEFAULT_CAMERA_CALIB = Path(
-    COMMON_ROOT / "camera/elp_ov2710_1280x720_calibration.npz"
+    "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/common/camera/elp_ov2710_1280x720_calibration.npz"
 )
 DEFAULT_SEG_ENGINE_INTEGRATION = Path(
-    MODEL_ROOT / "segmentation/kfashion_yolo26s_seg3_e100_best.engine"
+    "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/models/segmentation/kfashion_yolo26s_seg3_e100_best.engine"
 )
 DEFAULT_UPPER_POSE_ENGINE = Path(
-    MODEL_ROOT / "pose/upper/tshirt_pose_yolo26m_synth_artf_board_v1_best.engine"
+    "/workspace/2026ESWContest_free_Otgaestra/SW/Jetson/models/pose/upper/tshirt_pose_yolo26m_synth_artf_board_v1_best.engine"
 )
 DEFAULT_BOTTOM_POSE_ENGINE = Path(
-    MODEL_ROOT / "pose/lower/bottom_pose8_beige_finetune_v2_best.engine"
+    "/workspace/project_train/yolo26/bottom_pose8_beige_finetune_v2_best.engine"
 )
 
 def _load_integration_ui_camera_session(owner: Any) -> Dict[str, Any]:
@@ -1999,6 +2003,7 @@ class V22SharedRawCameraProvider:
 class WorkflowSignals(QObject):
     ui = Signal(object)
     log = Signal(str)
+    app_next_cycle = Signal()
 
 
 class JerberMainController(v22.MaintenanceUiController):
@@ -2016,6 +2021,13 @@ class JerberMainController(v22.MaintenanceUiController):
         self._active_upper_vla_process: Optional[Any] = None
         self._active_bottom_lock = threading.RLock()
         self._active_bottom_process: Optional[Any] = None
+
+        # Flutter/Jetson bridge IPC state.
+        # The already-running V22 process remains the sole camera/robot workflow owner.
+        self._app_ipc_lock = threading.RLock()
+        self._app_job_id: Optional[str] = None
+        self._app_target = 0
+        self._app_completed = 0
 
         # V35 display-only macro telemetry + 7-minute optional force-fold watch.
         # This is separate from the normal workflow_stop button: choosing
@@ -2195,6 +2207,7 @@ class JerberMainController(v22.MaintenanceUiController):
 
         self.workflow_signals.ui.connect(self._apply_ui_update)
         self.workflow_signals.log.connect(self._append_log)
+        self.workflow_signals.app_next_cycle.connect(self._schedule_app_next_cycle)
 
         self._apply_ui_update({
             "state": "초기 빈 판 기준 준비",
@@ -2208,6 +2221,13 @@ class JerberMainController(v22.MaintenanceUiController):
             "integration_status": "카메라 LIVE · EMPTY BOARD RAW 준비",
         })
         self._begin_initial_empty_board_capture()
+
+        # Poll the shared host<->Docker IPC directory from the Qt main thread.
+        self._app_ipc_timer = QTimer()
+        self._app_ipc_timer.setInterval(250)
+        self._app_ipc_timer.timeout.connect(self._poll_app_ipc)
+        self._app_ipc_timer.start()
+        print(f"[APP-IPC-READY] dir={app_ipc.BASE_DIR}", flush=True)
         print(f"[MAIN] build={BUILD} physical={bool(args.physical)}")
         print(
             "[MAIN-FLOW] Mode A: garment_transfer -> TOP/BOTTOM classifier; "
@@ -3159,6 +3179,201 @@ class JerberMainController(v22.MaintenanceUiController):
                 flush=True,
             )
 
+    def _emit_app_event(
+        self,
+        event_type: str,
+        *,
+        job_id: Optional[str] = None,
+        **fields: Any,
+    ) -> None:
+        with self._app_ipc_lock:
+            resolved = str(job_id or self._app_job_id or "").strip()
+            if not resolved:
+                return
+            payload = app_ipc.emit_event(
+                event_type,
+                job_id=resolved,
+                **fields,
+            )
+        print(f"[APP-IPC-EVENT] {payload}", flush=True)
+
+    def _clear_app_job(self) -> None:
+        with self._app_ipc_lock:
+            self._app_job_id = None
+            self._app_target = 0
+            self._app_completed = 0
+
+    @Slot()
+    def _schedule_app_next_cycle(self) -> None:
+        with self._app_ipc_lock:
+            job_id = self._app_job_id
+            completed = int(self._app_completed)
+            target = int(self._app_target)
+
+        if not job_id or completed >= target:
+            return
+
+        print(
+            f"[APP-IPC-NEXT] job={job_id} completed={completed}/{target}",
+            flush=True,
+        )
+
+        def start_if_still_active() -> None:
+            with self._app_ipc_lock:
+                same_job = self._app_job_id == job_id
+            if same_job:
+                self._start_workflow()
+
+        # The previous worker must leave _workflow_loop/finally first.
+        QTimer.singleShot(1200, start_if_still_active)
+
+    def _verify_app_job_started(self, job_id: str) -> None:
+        with self._app_ipc_lock:
+            if self._app_job_id != job_id:
+                return
+
+        alive = (
+            self.workflow_thread is not None
+            and self.workflow_thread.is_alive()
+        )
+        if self._active_cycle or alive:
+            return
+
+        self._emit_app_event(
+            "ERROR",
+            job_id=job_id,
+            message="기존 V22 workflow가 시작되지 않았습니다. Jetson 화면/카메라 설정 상태를 확인하세요.",
+        )
+        self._clear_app_job()
+
+    @Slot()
+    def _poll_app_ipc(self) -> None:
+        command = app_ipc.consume_command()
+        if not command:
+            return
+
+        kind = str(command.get("command") or "").strip().upper()
+        job_id = str(command.get("jobId") or "").strip()
+
+        print(f"[APP-IPC-COMMAND] {command}", flush=True)
+
+        if not job_id:
+            return
+
+        if kind == "START_JOB":
+            try:
+                target = int(command.get("target", 1))
+            except Exception:
+                target = 0
+
+            if not 1 <= target <= 30:
+                self._emit_app_event(
+                    "ERROR",
+                    job_id=job_id,
+                    message="target은 1~30이어야 합니다.",
+                )
+                return
+
+            busy = (
+                self._active_cycle
+                or (
+                    self.workflow_thread is not None
+                    and self.workflow_thread.is_alive()
+                )
+                or self._app_job_id is not None
+            )
+            if busy:
+                self._emit_app_event(
+                    "ERROR",
+                    job_id=job_id,
+                    message="이미 로봇 작업이 진행 중입니다.",
+                )
+                return
+
+            if not self._initial_empty_board_ready.is_set():
+                self._emit_app_event(
+                    "ERROR",
+                    job_id=job_id,
+                    message="초기 EMPTY BOARD 기준이 아직 준비되지 않았습니다.",
+                )
+                return
+
+            if not bool(self.args.physical):
+                self._emit_app_event(
+                    "ERROR",
+                    job_id=job_id,
+                    message="현재 main.py가 --physical 모드가 아닙니다.",
+                )
+                return
+
+            with self._app_ipc_lock:
+                self._app_job_id = job_id
+                self._app_target = target
+                self._app_completed = 0
+
+            print(
+                f"[APP-IPC-START] job={job_id} target={target}",
+                flush=True,
+            )
+
+            self._start_workflow()
+            QTimer.singleShot(
+                400,
+                lambda j=job_id: self._verify_app_job_started(j),
+            )
+            return
+
+        if kind == "STOP_JOB":
+            with self._app_ipc_lock:
+                active_job = self._app_job_id
+
+            if active_job != job_id:
+                self._emit_app_event(
+                    "ERROR",
+                    job_id=job_id,
+                    message="현재 실행 중인 작업 ID와 STOP_JOB ID가 다릅니다.",
+                )
+                return
+
+            print(f"[APP-IPC-STOP-REQUEST] job={job_id}", flush=True)
+            self._request_stop_after_current()
+            return
+
+        self._emit_app_event(
+            "ERROR",
+            job_id=job_id,
+            message=f"지원하지 않는 IPC 명령: {kind}",
+        )
+
+    def _app_cycle_complete(self, garment: str) -> None:
+        with self._app_ipc_lock:
+            job_id = self._app_job_id
+            if not job_id:
+                return
+
+            self._app_completed += 1
+            completed = int(self._app_completed)
+            target = int(self._app_target)
+
+        self._emit_app_event(
+            "CLOTH_DONE",
+            job_id=job_id,
+            completed=completed,
+            target=target,
+            garment=str(garment),
+        )
+
+        if completed >= target:
+            self._emit_app_event(
+                "JOB_DONE",
+                job_id=job_id,
+                completed=completed,
+                target=target,
+            )
+            self._clear_app_job()
+        else:
+            self.workflow_signals.app_next_cycle.emit()
+
     def _wait_camera_ready(self) -> None:
         deadline = time.monotonic() + 15.0
         while time.monotonic() < deadline and not self.workflow_stop.is_set():
@@ -3596,7 +3811,14 @@ class JerberMainController(v22.MaintenanceUiController):
         if not isinstance(raw, (bytes, bytearray)):
             return
         authoritative = Path(state['path']).expanduser().resolve()
-        targets = [authoritative]
+        dual = Path('/workspace/project_train/aruco_test/dual')
+        targets = [
+            authoritative,
+            dual / 'elp_ov2710_folding_board_homography_cache.json',
+            dual / 'dual_roarm_folding_board_homography_cache.json',
+            dual / 'undistort' / 'dual_roarm_folding_board_homography_cache.json',
+            dual / 'undistort' / 'elp_ov2710_folding_board_homography_cache.json',
+        ]
         restored = 0
         for path in dict.fromkeys(targets):
             try:
@@ -4373,6 +4595,7 @@ class JerberMainController(v22.MaintenanceUiController):
                     + ("FORCE_FOLD_AFTER_7MIN" if forced_fold else "FINISH")
                     + " + AUTO FOLD + EMPTY BOARD REFRESH; V22 camera still LIVE"
                 )
+                self._app_cycle_complete("bottom")
                 self._clear_force_fold_state()
                 return
 
@@ -4439,14 +4662,30 @@ class JerberMainController(v22.MaintenanceUiController):
                 + ("FORCE_FOLD_AFTER_7MIN" if forced_fold else "FINISH")
                 + " + AUTO FOLD + EMPTY BOARD REFRESH; V22 camera still LIVE"
             )
+            self._app_cycle_complete("upper")
             self._clear_force_fold_state()
         except Exception as exc:
             error = repr(exc)
             print(f"[MAIN-ERROR] {error}")
             self.workflow_signals.log.emit(f"MAIN ERROR: {error}")
+            if self._app_job_id:
+                self._emit_app_event("ERROR", message=error)
+                self._clear_app_job()
         finally:
             self._unload_classifier()
             self._end_vla_watch()
+            if (
+                self._app_job_id
+                and self.workflow_stop.is_set()
+                and final_kind is None
+                and error is None
+            ):
+                self._emit_app_event(
+                    "STOPPED",
+                    completed=self._app_completed,
+                    target=self._app_target,
+                )
+                self._clear_app_job()
             self._active_cycle = False
             self.current_garment = final_kind
             self.workflow_signals.ui.emit({
@@ -4734,7 +4973,7 @@ def _integration_self_test(args: argparse.Namespace) -> int:
         print(f"[MAIN-INTEGRATION-CHECK] runtime.{name}={exists} path={path}")
         assets_ok = assets_ok and exists
     frozen_root = Path("/workspace/project_train/models/bottom_classifier_frozen_final824")
-    robust_root = MODEL_ROOT / "decision/lower/robust30"
+    robust_root = Path("/workspace/project_train/models/bottom_classifier_robust30_aug_final824")
     bottom_active = str(os.environ.get("BOTTOM_ACTION_MODEL", "robust30")).strip().lower()
     bottom_specs = (
         ("robust30", robust_root, "robust30_aug", "BOTTOM_ROBUST30_NORM", "ROBUST30-AUG"),
