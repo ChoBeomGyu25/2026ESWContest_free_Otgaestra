@@ -14,19 +14,9 @@ inspect_upper_homography_models.py
 prepare_upper_github_bundle.py
 validate_upper_submission_bundle.py
 
-# Upper runtime debug artifacts
-SW/Jetson/preprocessing/upper/*.log
-SW/Jetson/preprocessing/upper/debug/
-SW/Jetson/preprocessing/upper/debug_images/
-SW/Jetson/preprocessing/upper/outputs/
-
 # OS metadata
 .DS_Store
 Thumbs.db
-SW/Jetson/preprocessing/upper/basket_torque_descent_*.csv
-
-# Lower runtime generated artifacts
-SW/Jetson/preprocessing/lower/outputs/
 
 # Python tool/cache directories
 .pytest_cache/
@@ -44,9 +34,6 @@ env/
 *.swo
 .vscode/
 .idea/
-
-# Upper post-laydown diagnostic artifacts
-SW/Jetson/preprocessing/upper/post_laydown_mask_debug/
 
 # Arduino build artifacts
 SW/Arduino/**/build/
